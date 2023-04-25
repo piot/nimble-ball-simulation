@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 #include "utest.h"
 #include <clog/clog.h>
-#include <nimble-ball/nimble_ball.h>
+#include <nimble-ball-simulation/nimble_ball_simulation.h>
 
 UTEST(NimbleBall, verify)
 {
@@ -15,7 +15,7 @@ UTEST(NimbleBall, verify)
     ASSERT_EQ(NlGamePhaseWaitingForPlayers, game.phase);
 
     NlPlayerInput singleInput;
-    singleInput.uniqueId = 3;
+    singleInput.participantId = 3;
     singleInput.input.inGameInput.horizontalAxis = -99;
 
     Clog subLog;

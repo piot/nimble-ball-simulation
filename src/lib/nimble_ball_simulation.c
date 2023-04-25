@@ -2,7 +2,7 @@
  *  Copyright (c) Peter Bjorklund. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-#include <nimble-ball/nimble_ball.h>
+#include <nimble-ball-simulation/nimble_ball_simulation.h>
 
 void nlGameInit(NlGame* self)
 {
@@ -20,6 +20,14 @@ void nlGameInit(NlGame* self)
     self->arena.rect.bottom = 0;
     self->arena.rect.top = 100;
     self->arena.halfLineX = 100;
+
+    self->ball.position.x = 100;
+    self->ball.position.y = 50;
+
+    self->ball.velocity.x = 1;
+    self->ball.velocity.y = 0;
+
+    self->tickCount = 0;
 }
 
 static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
@@ -34,7 +42,8 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
 
         player->controllingAvatarIndex = avatarIndex;
 
-        CLOG_C_DEBUG(log, "spawning avatar %zu for player %zu", avatarIndex, i)
+        CLOG_C_DEBUG(log, "spawning avatar %zu for player %zu (participant %d)", avatarIndex, i,
+                     player->assignedToParticipantIndex)
     }
 }
 
@@ -109,10 +118,10 @@ static void checkInputDiff(NlGame* self, const NlPlayerInput* inputs, size_t inp
     }
 
     for (size_t i = 0; i < inputCount; ++i) {
-        NlParticipant* participant = &self->participantLookup[inputs[i].uniqueId];
+        NlParticipant* participant = &self->participantLookup[inputs[i].participantId];
         if (!participant->isUsed) {
             participant->isUsed = true;
-            participant->participantId = inputs[i].uniqueId;
+            participant->participantId = inputs[i].participantId;
             participantJoined(&self->players, participant, log);
         }
         participant->internalMarked = true;
@@ -138,14 +147,22 @@ static void tickCountDown(NlGame* self)
     self->countDown--;
 }
 
+static void tickBall(NlBall* ball)
+{
+    ball->position.x += ball->velocity.x;
+    ball->position.y += ball->velocity.y;
+}
+
 static void tickPlaying(NlGame* self)
 {
+    tickBall(&self->ball);
 }
 
 void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log)
 {
     checkInputDiff(self, inputs, inputCount, log);
 
+    self->tickCount++;
     switch (self->phase) {
         case NlGamePhaseWaitingForPlayers:
             tickWaitingForPlayers(self, log);

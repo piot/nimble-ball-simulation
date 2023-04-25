@@ -2,8 +2,8 @@
  *  Copyright (c) Peter Bjorklund. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-#ifndef NIMBLE_BALL_H
-#define NIMBLE_BALL_H
+#ifndef NIMBLE_BALL_SIMULATION_H
+#define NIMBLE_BALL_SIMULATION_H
 
 #define NL_MAX_PLAYERS (16)
 #define NL_MAX_PARTICIPANTS (32)
@@ -30,7 +30,7 @@ typedef enum NlPlayerInputType {
 } NlPlayerInputType;
 
 typedef struct NlPlayerInput {
-    int uniqueId;
+    uint8_t participantId;
     NlPlayerInputType inputType;
     union {
         NlPlayerInGameInput inGameInput;
@@ -49,6 +49,8 @@ typedef struct NlPosition {
     int x;
     int y;
 } NlPosition;
+
+typedef NlPosition NlVelocity;
 
 typedef struct NlRect {
     int left;
@@ -90,6 +92,11 @@ typedef struct NlArena {
     int halfLineX;
 } NlArena;
 
+typedef struct NlBall {
+    NlPosition position;
+    NlVelocity velocity;
+} NlBall;
+
 typedef struct NlGame {
     NlParticipant participantLookup[NL_MAX_PARTICIPANTS];
     size_t lastParticipantLookupCount;
@@ -98,6 +105,8 @@ typedef struct NlGame {
     NlGamePhase phase;
     NlArena arena;
     int countDown;
+    NlBall ball;
+    size_t tickCount;
 } NlGame;
 
 void nlGameInit(NlGame* self);
