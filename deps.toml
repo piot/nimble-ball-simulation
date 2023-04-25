@@ -1,0 +1,8 @@
+depsversion = "0.0.0"
+
+name = "piot/nimble-ball-c"
+version = "0.0.0"
+
+[[dependencies]]
+name = "piot/clog"
+version = "*"
