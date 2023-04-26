@@ -1,6 +1,6 @@
 depsversion = "0.0.0"
 
-name = "piot/nimble-ball-c"
+name = "piot/nimble-ball-simulation"
 version = "0.0.0"
 
 [[dependencies]]
