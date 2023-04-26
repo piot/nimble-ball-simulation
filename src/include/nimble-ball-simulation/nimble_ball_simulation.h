@@ -53,6 +53,7 @@ typedef struct NlPlayer {
     int preferredTeamId;
     int controllingAvatarIndex;
     int assignedToParticipantIndex;
+    NlPlayerInput playerInput;
 } NlPlayer;
 
 typedef struct NlPlayers {
@@ -61,8 +62,13 @@ typedef struct NlPlayers {
 } NlPlayers;
 
 typedef struct NlAvatar {
-    bl_vector2 position;
+    bl_circle circle;
+    bl_vector2 requestedVelocity;
+    bl_vector2 velocity;
+    float visualRotation;
     size_t controlledByPlayerIndex;
+    uint8_t kickCooldown;
+    bool kickWhenAble;
 } NlAvatar;
 
 typedef struct NlAvatars {
