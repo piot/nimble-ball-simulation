@@ -37,6 +37,7 @@ endif ()
 target_include_directories(nimble_ball_simulation PUBLIC ${DEPS}piot/clog/src/include)
 target_include_directories(nimble_ball_simulation PUBLIC ${DEPS}piot/tiny-libc/src/include)
 target_include_directories(nimble_ball_simulation PUBLIC ${DEPS}piot/transmute-c/src/include)
+target_include_directories(nimble_ball_simulation PUBLIC ${DEPS}piot/basal-c/src/include)
 
 target_include_directories(nimble_ball_simulation PUBLIC ../include)
 

@@ -31,7 +31,7 @@ static int stateToString(void* _self, const TransmuteState* state, char* target,
 
     const NlGame* appState = (NlGame*) state->state;
     return tc_snprintf(target, maxTargetOctetSize, "state: tick: %zu ball-pos: %d, %d", appState->tickCount,
-                       appState->ball.position.x, appState->ball.position.y);
+                       appState->ball.circle.center.x, appState->ball.circle.center.y);
 }
 
 static int inputToString(void* _self, const TransmuteParticipantInput* input, char* target, size_t maxTargetOctetSize)

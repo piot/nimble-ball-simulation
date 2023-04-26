@@ -11,6 +11,9 @@
 #include <clog/clog.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <basal/basal_vector2.h>
+#include <basal/basal_rect2.h>
+#include <basal/basal_circle.h>
 
 typedef struct NlPlayerInGameInput {
     int verticalAxis;
@@ -45,19 +48,6 @@ typedef struct NlParticipant {
     bool internalMarked;
 } NlParticipant;
 
-typedef struct NlPosition {
-    int x;
-    int y;
-} NlPosition;
-
-typedef NlPosition NlVelocity;
-
-typedef struct NlRect {
-    int left;
-    int right;
-    int top;
-    int bottom;
-} NlRect;
 
 typedef struct NlPlayer {
     int preferredTeamId;
@@ -71,7 +61,7 @@ typedef struct NlPlayers {
 } NlPlayers;
 
 typedef struct NlAvatar {
-    NlPosition position;
+    bl_vector2 position;
     size_t controlledByPlayerIndex;
 } NlAvatar;
 
@@ -88,13 +78,13 @@ typedef enum NlGamePhase {
 } NlGamePhase;
 
 typedef struct NlArena {
-    NlRect rect;
+    bl_recti rect;
     int halfLineX;
 } NlArena;
 
 typedef struct NlBall {
-    NlPosition position;
-    NlVelocity velocity;
+    bl_circle circle;
+    bl_vector2 velocity;
 } NlBall;
 
 typedef struct NlGame {

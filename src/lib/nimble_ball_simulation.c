@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 
+#include <basal/basal_line_segment.h>
+
 void nlGameInit(NlGame* self)
 {
     self->phase = NlGamePhaseWaitingForPlayers;
@@ -15,17 +17,18 @@ void nlGameInit(NlGame* self)
     }
     self->lastParticipantLookupCount = 0;
 
-    self->arena.rect.left = 0;
-    self->arena.rect.right = 200;
-    self->arena.rect.bottom = 0;
-    self->arena.rect.top = 100;
+    self->arena.rect.vector.x = 0;
+    self->arena.rect.vector.y = 200;
+    self->arena.rect.size.width = 0;
+    self->arena.rect.size.height = 100;
     self->arena.halfLineX = 100;
 
-    self->ball.position.x = 100;
-    self->ball.position.y = 50;
+    self->ball.circle.center.x = 100;
+    self->ball.circle.center.y = 50;
+    self->ball.circle.radius = 10;
 
-    self->ball.velocity.x = 1;
-    self->ball.velocity.y = 0;
+    self->ball.velocity.x = 2;
+    self->ball.velocity.y = -3;
 
     self->tickCount = 0;
 }
@@ -36,14 +39,60 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         NlPlayer* player = &self->players.players[i];
         size_t avatarIndex = self->avatars.avatarCount++;
         NlAvatar* avatar = &self->avatars.avatars[avatarIndex];
-        avatar->position.x = i * 10;
-        avatar->position.y = player->preferredTeamId == 1 ? 75 : 25;
+        avatar->position.x = player->preferredTeamId == 1 ? 75 : 25;
+        avatar->position.y = i * 10 + 20;
         avatar->controlledByPlayerIndex = i;
 
         player->controllingAvatarIndex = avatarIndex;
 
         CLOG_C_DEBUG(log, "spawning avatar %zu for player %zu (participant %d)", avatarIndex, i,
                      player->assignedToParticipantIndex)
+    }
+}
+
+static void collideBallAgainstBorders(NlBall* ball)
+{
+    const float arenaWidth = 640*100;
+    const float arenaHeight = 360*100;
+
+    bl_line_segment lineSegment;
+    lineSegment.a.x = 0;
+    lineSegment.a.y = 0;
+    lineSegment.b.x = arenaWidth;
+    lineSegment.b.y = 0;
+
+    bl_line_segment lineSegmentLower;
+    lineSegmentLower.a.x = 0;
+    lineSegmentLower.a.y = arenaHeight;
+    lineSegmentLower.b.x = arenaWidth;
+    lineSegmentLower.b.y = arenaHeight;
+
+    bl_line_segment lineSegmentRight;
+    lineSegmentRight.a.x = arenaWidth;
+    lineSegmentRight.a.y = arenaHeight;
+    lineSegmentRight.b.x = arenaWidth;
+    lineSegmentRight.b.y = 0;
+
+    bl_line_segment lineSegmentLeft;
+    lineSegmentLeft.a.x = 0;
+    lineSegmentLeft.a.y = arenaHeight;
+    lineSegmentLeft.b.x = 0;
+    lineSegmentLeft.b.y = 0;
+
+    bl_line_segment lineSegments[4];
+
+    lineSegments[0] = lineSegment;
+    lineSegments[1] = lineSegmentLower;
+    lineSegments[2] = lineSegmentRight;
+    lineSegments[3] = lineSegmentLeft;
+
+    for (size_t i=0 ; i<sizeof(lineSegments) / sizeof(lineSegments[0]); ++i) {
+        bl_line_segment lineSegmentToCheck = lineSegments[i];
+        bl_collision collision = bl_line_segment_circle_intersect(lineSegmentToCheck, ball->circle);
+        if (collision.depth > 0) {
+            ball->velocity = bl_vector2_reflect(ball->velocity, collision.normal);
+            ball->circle.center = bl_vector2_add_scale(ball->circle.center, collision.normal, collision.depth);
+        }
     }
 }
 
@@ -149,8 +198,12 @@ static void tickCountDown(NlGame* self)
 
 static void tickBall(NlBall* ball)
 {
-    ball->position.x += ball->velocity.x;
-    ball->position.y += ball->velocity.y;
+    ball->velocity = bl_vector2_mul_scalar(ball->velocity, 0.991f);
+
+    ball->circle.center.x += ball->velocity.x;
+    ball->circle.center.y += ball->velocity.y;
+
+    collideBallAgainstBorders(ball);
 }
 
 static void tickPlaying(NlGame* self)
