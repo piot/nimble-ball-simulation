@@ -14,6 +14,21 @@
 #include <basal/vector2.h>
 #include <basal/basal_rect2.h>
 #include <basal/circle.h>
+#include <basal/rect.h>
+#include <basal/basal_line_segment.h>
+
+typedef struct NlGoal {
+    int ownedByTeam;
+    BlRect rect;
+    bool facingLeft;
+} NlGoal;
+
+typedef struct NlConstants {
+    NlGoal goals[2];
+    BlLineSegment borderSegments[6];
+} NlConstants;
+
+const NlConstants g_nlConstants;
 
 typedef struct NlPlayerInGameInput {
     int verticalAxis;
@@ -56,6 +71,17 @@ typedef struct NlPlayer {
     NlPlayerInput playerInput;
 } NlPlayer;
 
+#define NL_MAX_TEAMS (2)
+
+typedef struct NlTeam {
+    uint8_t score;
+} NlTeam;
+
+typedef struct NlTeams {
+    NlTeam teams[NL_MAX_TEAMS];
+    size_t teamCount;
+} NlTeams;
+
 typedef struct NlPlayers {
     NlPlayer players[NL_MAX_PLAYERS];
     size_t playerCount;
@@ -94,10 +120,12 @@ typedef struct NlBall {
     BlVector2 velocity;
 } NlBall;
 
+
 typedef struct NlGame {
     NlParticipant participantLookup[NL_MAX_PARTICIPANTS];
     size_t lastParticipantLookupCount;
     NlPlayers players;
+    NlTeams teams;
     NlAvatars avatars;
     NlGamePhase phase;
     NlArena arena;

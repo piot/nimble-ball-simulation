@@ -5,6 +5,26 @@
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 #include <basal/basal_line_segment.h>
 
+const float goalSize = 90;
+const float goalDetectWidth = 40;
+const float arenaWidth = 640;
+const float arenaHeight = 360;
+
+const NlConstants g_nlConstants = {
+    0, 0, 180-goalSize/2, goalDetectWidth, goalSize, false,
+    1, arenaWidth-goalDetectWidth, 180-goalSize/2, goalDetectWidth, goalSize, true,
+    goalDetectWidth,0,arenaWidth-1-goalDetectWidth,0, // lower line segment
+    goalDetectWidth,arenaHeight-1,arenaWidth-goalDetectWidth,arenaHeight-1, // upper line segment
+
+    goalDetectWidth,arenaHeight-1,goalDetectWidth,arenaHeight/2+goalSize/2, // upper left
+    goalDetectWidth,0,goalDetectWidth,arenaHeight/2-goalSize/2, // lower left
+
+    arenaWidth-1-goalDetectWidth,arenaHeight-1,arenaWidth-1-goalDetectWidth,arenaHeight/2+goalSize/2, // upper right
+    arenaWidth-1-goalDetectWidth,0,arenaWidth-1-goalDetectWidth,arenaHeight/2-goalSize/2, // lower right
+};
+
+
+
 void nlGameInit(NlGame* self)
 {
     self->phase = NlGamePhaseWaitingForPlayers;
@@ -34,8 +54,8 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         NlPlayer* player = &self->players.players[i];
         size_t avatarIndex = self->avatars.avatarCount++;
         NlAvatar* avatar = &self->avatars.avatars[avatarIndex];
-        avatar->circle.center.x = player->preferredTeamId == 1 ? 75 : 25;
-        avatar->circle.center.y = i * 10.0f + 20.0f;
+        avatar->circle.center.x = player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f : goalDetectWidth + 40.0f;
+        avatar->circle.center.y = i * 40.0 + goalDetectWidth + 20.0f;
         avatar->circle.radius = 20.0f;
         avatar->controlledByPlayerIndex = i;
         avatar->kickCooldown = 0;
@@ -54,44 +74,10 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
 
 static void collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float safeDistance, float dampening)
 {
-    const float arenaWidth = 640.0f;
-    const float arenaHeight = 360.0f;
-
-    BlLineSegment lineSegment;
-    lineSegment.a.x = 0;
-    lineSegment.a.y = 0;
-    lineSegment.b.x = arenaWidth;
-    lineSegment.b.y = 0;
-
-    BlLineSegment lineSegmentLower;
-    lineSegmentLower.a.x = 0;
-    lineSegmentLower.a.y = arenaHeight;
-    lineSegmentLower.b.x = arenaWidth;
-    lineSegmentLower.b.y = arenaHeight;
-
-    BlLineSegment lineSegmentRight;
-    lineSegmentRight.a.x = arenaWidth;
-    lineSegmentRight.a.y = arenaHeight;
-    lineSegmentRight.b.x = arenaWidth;
-    lineSegmentRight.b.y = 0;
-
-    BlLineSegment lineSegmentLeft;
-    lineSegmentLeft.a.x = 0;
-    lineSegmentLeft.a.y = arenaHeight;
-    lineSegmentLeft.b.x = 0;
-    lineSegmentLeft.b.y = 0;
-
-    BlLineSegment lineSegments[4];
-
-    lineSegments[0] = lineSegment;
-    lineSegments[1] = lineSegmentLower;
-    lineSegments[2] = lineSegmentRight;
-    lineSegments[3] = lineSegmentLeft;
-
     BlCircle circleCheck = *circle;
     circleCheck.radius = circle->radius + safeDistance;
-    for (size_t i=0 ; i<sizeof(lineSegments) / sizeof(lineSegments[0]); ++i) {
-        BlLineSegment lineSegmentToCheck = lineSegments[i];
+    for (size_t i=0 ; i<sizeof(g_nlConstants.borderSegments) / sizeof(g_nlConstants.borderSegments[0]); ++i) {
+        BlLineSegment lineSegmentToCheck = g_nlConstants.borderSegments[i];
         BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, circleCheck);
         if (collision.depth > 0) {
             *velocity = blVector2Scale(blVector2Reflect(*velocity, collision.normal), dampening);
@@ -309,6 +295,47 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
     avatar->dribbleCooldown = 12;
 }
 
+static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams)
+{
+    BlCollision collision = blRectCircleIntersect(goal->rect, ball->circle);
+    if (collision.depth == 0) {
+        return false;
+    }
+
+    bool isGoal = false;
+    if (goal->facingLeft) {
+        isGoal = (ball->circle.center.x - ball->circle.radius > goal->rect.position.x);
+    } else {
+        isGoal = (ball->circle.center.x + ball->circle.radius < goal->rect.position.x + goal->rect.size.x);
+    }
+
+    if (!isGoal) {
+        return false;
+    }
+
+    CLOG_VERBOSE("GOAL! for %d", goal->ownedByTeam)
+    teams->teams[goal->ownedByTeam].score++;
+    return true;
+}
+
+static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball, NlTeams* teams)
+{
+    bool someoneScored = false;
+    for (size_t i =0 ; i< goalCount; ++i) {
+        const NlGoal* goal = &goals[i];
+        someoneScored |= checkGoal(goal, ball, teams);
+    }
+
+    return someoneScored;
+}
+
+static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase)
+{
+    bool someoneScored = checkGoals(g_nlConstants.goals, 2, ball, teams);
+    if (someoneScored) {
+        *phase = NlGamePhasePostGame;
+    }
+}
 
 static void tickKick(NlAvatars* avatars, NlBall* ball)
 {
@@ -339,6 +366,7 @@ static void tickPlaying(NlGame* self)
     tickDribble(&self->avatars, &self->ball);
     tickKick(&self->avatars, &self->ball);
     tickBall(&self->ball);
+    tickGoalCheck(&self->teams,  &self->ball, &self->phase);
 }
 
 void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log)
