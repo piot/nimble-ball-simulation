@@ -11,9 +11,9 @@
 #include <clog/clog.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <basal/basal_vector2.h>
+#include <basal/vector2.h>
 #include <basal/basal_rect2.h>
-#include <basal/basal_circle.h>
+#include <basal/circle.h>
 
 typedef struct NlPlayerInGameInput {
     int verticalAxis;
@@ -62,9 +62,9 @@ typedef struct NlPlayers {
 } NlPlayers;
 
 typedef struct NlAvatar {
-    bl_circle circle;
-    bl_vector2 requestedVelocity;
-    bl_vector2 velocity;
+    BlCircle circle;
+    BlVector2 requestedVelocity;
+    BlVector2 velocity;
     float visualRotation;
     size_t controlledByPlayerIndex;
     uint8_t kickCooldown;
@@ -84,13 +84,12 @@ typedef enum NlGamePhase {
 } NlGamePhase;
 
 typedef struct NlArena {
-    bl_recti rect;
     int halfLineX;
 } NlArena;
 
 typedef struct NlBall {
-    bl_circle circle;
-    bl_vector2 velocity;
+    BlCircle circle;
+    BlVector2 velocity;
 } NlBall;
 
 typedef struct NlGame {

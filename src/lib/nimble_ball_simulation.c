@@ -17,10 +17,6 @@ void nlGameInit(NlGame* self)
     }
     self->lastParticipantLookupCount = 0;
 
-    self->arena.rect.vector.x = 0;
-    self->arena.rect.vector.y = 200;
-    self->arena.rect.size.width = 0;
-    self->arena.rect.size.height = 100;
     self->arena.halfLineX = 100;
 
     self->ball.circle.center.x = 100.0f;
@@ -41,7 +37,7 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         NlAvatar* avatar = &self->avatars.avatars[avatarIndex];
         avatar->circle.center.x = player->preferredTeamId == 1 ? 75 : 25;
         avatar->circle.center.y = i * 10.0f + 20.0f;
-        avatar->circle.radius = 15.0f;
+        avatar->circle.radius = 10.0f;
         avatar->controlledByPlayerIndex = i;
         avatar->kickCooldown = 0;
         avatar->velocity.x = 0;
@@ -61,31 +57,31 @@ static void collideBallAgainstBorders(NlBall* ball)
     const float arenaWidth = 640.0f;
     const float arenaHeight = 360.0f;
 
-    bl_line_segment lineSegment;
+    BlLineSegment lineSegment;
     lineSegment.a.x = 0;
     lineSegment.a.y = 0;
     lineSegment.b.x = arenaWidth;
     lineSegment.b.y = 0;
 
-    bl_line_segment lineSegmentLower;
+    BlLineSegment lineSegmentLower;
     lineSegmentLower.a.x = 0;
     lineSegmentLower.a.y = arenaHeight;
     lineSegmentLower.b.x = arenaWidth;
     lineSegmentLower.b.y = arenaHeight;
 
-    bl_line_segment lineSegmentRight;
+    BlLineSegment lineSegmentRight;
     lineSegmentRight.a.x = arenaWidth;
     lineSegmentRight.a.y = arenaHeight;
     lineSegmentRight.b.x = arenaWidth;
     lineSegmentRight.b.y = 0;
 
-    bl_line_segment lineSegmentLeft;
+    BlLineSegment lineSegmentLeft;
     lineSegmentLeft.a.x = 0;
     lineSegmentLeft.a.y = arenaHeight;
     lineSegmentLeft.b.x = 0;
     lineSegmentLeft.b.y = 0;
 
-    bl_line_segment lineSegments[4];
+    BlLineSegment lineSegments[4];
 
     lineSegments[0] = lineSegment;
     lineSegments[1] = lineSegmentLower;
@@ -93,11 +89,11 @@ static void collideBallAgainstBorders(NlBall* ball)
     lineSegments[3] = lineSegmentLeft;
 
     for (size_t i=0 ; i<sizeof(lineSegments) / sizeof(lineSegments[0]); ++i) {
-        bl_line_segment lineSegmentToCheck = lineSegments[i];
-        bl_collision collision = bl_line_segment_circle_intersect(lineSegmentToCheck, ball->circle);
+        BlLineSegment lineSegmentToCheck = lineSegments[i];
+        BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, ball->circle);
         if (collision.depth > 0) {
-            ball->velocity = bl_vector2_reflect(ball->velocity, collision.normal);
-            ball->circle.center = bl_vector2_add_scale(ball->circle.center, collision.normal, collision.depth);
+            ball->velocity = blVector2Reflect(ball->velocity, collision.normal);
+            ball->circle.center = blVector2AddScale(ball->circle.center, collision.normal, collision.depth);
         }
     }
 }
@@ -207,7 +203,7 @@ static void tickCountDown(NlGame* self)
 
 static void tickBall(NlBall* ball)
 {
-    ball->velocity = bl_vector2_mul_scalar(ball->velocity, 0.995f);
+    ball->velocity = blVector2Scale(ball->velocity, 0.995f);
 
     ball->circle.center.x += ball->velocity.x;
     ball->circle.center.y += ball->velocity.y;
@@ -228,10 +224,10 @@ static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
 
         NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
         const NlPlayerInGameInput* inGameInput = &player->playerInput.input.inGameInput;
-        bl_vector2 requestVelocity;
+        BlVector2 requestVelocity;
         requestVelocity.x = inGameInput->horizontalAxis;
         requestVelocity.y = inGameInput->verticalAxis;
-        avatar->requestedVelocity = bl_vector2_mul_scalar(requestVelocity, 0.2f);
+        avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
         avatar->kickWhenAble = inGameInput->passButton;
     }
 
@@ -244,16 +240,18 @@ static void tickAvatars(NlAvatars* avatars)
     for (size_t i=0; i<avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
 
-        avatar->velocity = bl_vector2_add(avatar->velocity, avatar->requestedVelocity);
-        const float maxAvatarSpeed = 6.0f;
-        if (bl_vector2_square_length(avatar->velocity) > maxAvatarSpeed*maxAvatarSpeed) {
-            avatar->velocity = bl_vector2_mul_scalar(bl_vector2_unit(avatar->velocity),  maxAvatarSpeed);
+        avatar->velocity = blVector2Add(avatar->velocity, avatar->requestedVelocity);
+        const float maxAvatarSpeed = 50.0f;
+        if (blVector2SquareLength(avatar->velocity) > maxAvatarSpeed*maxAvatarSpeed) {
+            avatar->velocity = blVector2Scale(blVector2Unit(avatar->velocity),  maxAvatarSpeed);
         }
-        avatar->velocity = bl_vector2_mul_scalar(avatar->velocity,  0.9f);
-        avatar->circle.center = bl_vector2_add(avatar->circle.center, avatar->velocity);
-        float length = bl_vector2_square_length(avatar->requestedVelocity);
+        avatar->velocity = blVector2Scale(avatar->velocity,  0.9f);
+        avatar->circle.center = blVector2Add(avatar->circle.center, avatar->velocity);
+        float length = blVector2SquareLength(avatar->requestedVelocity);
         if (length > 0.001f) {
-            avatar->visualRotation = bl_math_atan2(avatar->requestedVelocity.y, avatar->requestedVelocity.x);
+            float target = blVector2ToAngle(avatar->requestedVelocity);
+            float angleDiff = blAngleMinimalDiff(target, avatar->visualRotation);
+            avatar->visualRotation += angleDiff * 0.1f;
         }
     }
 }
@@ -262,9 +260,12 @@ static void tickDribble(NlAvatars* avatars, NlBall* ball)
 {
     for (size_t i=0; i<avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
-        if (bl_circle_overlap(avatar->circle, ball->circle)) {
-            //float factor = bl_vector2_dot(ball->velocity, avatar->velocity);
-            ball->velocity = bl_vector2_mul_scalar(avatar->velocity, 1.5f);
+        if (blCircleOverlap(avatar->circle, ball->circle)) {
+            BlVector2 avatarDirection = blVector2FromAngle(avatar->visualRotation);
+            BlVector2 targetDribblePosition = blVector2AddScale(avatar->circle.center, avatarDirection, 12.0f);
+            BlVector2 diffFromTargetDribblePosition = blVector2Sub(targetDribblePosition, ball->circle.center);
+            ball->circle.center = blVector2AddScale(ball->circle.center, diffFromTargetDribblePosition, 0.2f);
+            ball->velocity = blVector2Scale(avatar->velocity, 1.1f);
         }
     }
 }
@@ -280,14 +281,14 @@ static void tickKick(NlAvatars* avatars, NlBall* ball)
         if (!avatar->kickWhenAble) {
             continue;
         }
-        bl_circle increasedReach = avatar->circle;
-        increasedReach.radius = avatar->circle.radius * 2.5f;
+        BlCircle increasedReach = avatar->circle;
+        increasedReach.radius = avatar->circle.radius * 2.0f;
 
-        if (bl_circle_overlap(increasedReach, ball->circle)) {
-            bl_vector2 direction;
-            direction.x = bl_math_cos(avatar->visualRotation);
-            direction.y = bl_math_sin(avatar->visualRotation);
-            ball->velocity = bl_vector2_add_scale(ball->velocity, direction, 5.8f);
+        if (blCircleOverlap(increasedReach, ball->circle)) {
+            BlVector2 avatarDirection = blVector2FromAngle(avatar->visualRotation);
+            BlVector2 shootStartPosition = blVector2AddScale(avatar->circle.center, avatarDirection, 22.0f);
+            ball->circle.center = shootStartPosition;
+            ball->velocity = blVector2AddScale(ball->velocity, avatarDirection, 8.0f);
             avatar->kickCooldown = 14;
         }
     }
