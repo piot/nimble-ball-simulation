@@ -97,6 +97,7 @@ typedef struct NlAvatar {
     uint8_t kickCooldown;
     bool requestBuildKickPower;
     uint8_t kickPower;
+    uint8_t teamIndex;
 } NlAvatar;
 
 typedef struct NlAvatars {

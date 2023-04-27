@@ -64,6 +64,7 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         avatar->velocity.y = 0;
         avatar->requestedVelocity.x = 0;
         avatar->requestedVelocity.y = 0;
+        avatar->teamIndex = player->preferredTeamId;
 
         player->controllingAvatarIndex = avatarIndex;
 
@@ -119,7 +120,7 @@ static void participantJoined(NlPlayers* players, NlParticipant* participant, Cl
     NlPlayer* assignedPlayer = &players->players[playerIndex];
     assignedPlayer->assignedToParticipantIndex = participant->participantId;
     assignedPlayer->controllingAvatarIndex = -1;
-    assignedPlayer->preferredTeamId = -1;
+    assignedPlayer->preferredTeamId = players->playerCount == 1 ? 0 : 1;
 
     CLOG_C_DEBUG(log, "participant has joined. creating player %zu for participant %d", playerIndex,
                  participant->participantId)
