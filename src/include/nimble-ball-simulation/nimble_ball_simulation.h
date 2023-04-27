@@ -67,8 +67,10 @@ typedef struct NlAvatar {
     BlVector2 velocity;
     float visualRotation;
     size_t controlledByPlayerIndex;
+    uint8_t dribbleCooldown;
     uint8_t kickCooldown;
-    bool kickWhenAble;
+    bool requestBuildKickPower;
+    uint8_t kickPower;
 } NlAvatar;
 
 typedef struct NlAvatars {
