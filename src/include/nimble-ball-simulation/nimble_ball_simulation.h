@@ -26,6 +26,7 @@ typedef struct NlGoal {
 typedef struct NlConstants {
     NlGoal goals[2];
     BlLineSegment borderSegments[6];
+    uint16_t matchDurationInTicks;
 } NlConstants;
 
 const NlConstants g_nlConstants;
@@ -109,6 +110,7 @@ typedef enum NlGamePhase {
     NlGamePhaseWaitingForPlayers,
     NlGamePhaseCountDown,
     NlGamePhasePlaying,
+    NlGamePhaseAfterAGoal,
     NlGamePhasePostGame,
 } NlGamePhase;
 
@@ -129,10 +131,12 @@ typedef struct NlGame {
     NlTeams teams;
     NlAvatars avatars;
     NlGamePhase phase;
+    uint16_t phaseCountDown;
     NlArena arena;
-    int countDown;
     NlBall ball;
     size_t tickCount;
+    uint16_t matchClockLeftInTicks;
+    uint8_t latestScoredTeamIndex;
 } NlGame;
 
 void nlGameInit(NlGame* self);

@@ -2,8 +2,9 @@
  *  Copyright (c) Peter Bjorklund. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-#include <nimble-ball-simulation/nimble_ball_simulation.h>
+#include "basal/math.h"
 #include <basal/basal_line_segment.h>
+#include <nimble-ball-simulation/nimble_ball_simulation.h>
 
 const float goalSize = 90;
 const float goalDetectWidth = 40;
@@ -20,7 +21,8 @@ const NlConstants g_nlConstants = {
     goalDetectWidth,0,goalDetectWidth,arenaHeight/2-goalSize/2, // lower left
 
     arenaWidth-1-goalDetectWidth,arenaHeight-1,arenaWidth-1-goalDetectWidth,arenaHeight/2+goalSize/2, // upper right
-    arenaWidth-1-goalDetectWidth,0,arenaWidth-1-goalDetectWidth,arenaHeight/2-goalSize/2, // lower right
+    arenaWidth-1-goalDetectWidth,0,arenaWidth-1-goalDetectWidth,arenaHeight/2-goalSize/2, //
+    (int)(62.5f * 10.0f),// matchDuration
 };
 
 
@@ -45,7 +47,13 @@ void nlGameInit(NlGame* self)
     self->ball.velocity.x = 2.0f;
     self->ball.velocity.y = 4.0f;
 
+    self->teams.teamCount = 2;
+    self->teams.teams[0].score = 0;
+    self->teams.teams[1].score = 0;
+
     self->tickCount = 0;
+    self->matchClockLeftInTicks = g_nlConstants.matchDurationInTicks;
+    self->latestScoredTeamIndex = 0xff;
 }
 
 static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
@@ -92,9 +100,8 @@ static void tickWaitingForPlayers(NlGame* self, Clog* log)
     if (self->players.playerCount > 0) {
         CLOG_C_DEBUG(log, "start count down")
         self->phase = NlGamePhaseCountDown;
+        self->phaseCountDown = 62 * 3;
         spawnAvatarsForPlayers(self, log);
-
-        self->countDown = 62 * 3;
     }
 }
 
@@ -183,11 +190,11 @@ static void checkInputDiff(NlGame* self, const NlPlayerInput* inputs, size_t inp
 
 static void tickCountDown(NlGame* self)
 {
-    if (self->countDown == 0) {
+    if (self->phaseCountDown == 0) {
         self->phase = NlGamePhasePlaying;
         return;
     }
-    self->countDown--;
+    self->phaseCountDown--;
 }
 
 #define MINIMAL_VELOCITY (0.12f)
@@ -296,7 +303,7 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
     avatar->dribbleCooldown = 12;
 }
 
-static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams)
+static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams, uint8_t* latestTeamToScore)
 {
     BlCollision collision = blRectCircleIntersect(goal->rect, ball->circle);
     if (collision.depth == 0) {
@@ -315,27 +322,33 @@ static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams)
     }
 
     CLOG_VERBOSE("GOAL! for %d", goal->ownedByTeam)
-    teams->teams[goal->ownedByTeam].score++;
+
+    int opposingTeam = goal->ownedByTeam == 0 ? 1 : 0;
+    teams->teams[opposingTeam].score++;
+    *latestTeamToScore = opposingTeam;
     return true;
 }
 
-static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball, NlTeams* teams)
+static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball, NlTeams* teams, uint8_t* latestScoredTeamIndex)
 {
     bool someoneScored = false;
     for (size_t i =0 ; i< goalCount; ++i) {
         const NlGoal* goal = &goals[i];
-        someoneScored |= checkGoal(goal, ball, teams);
+        someoneScored |= checkGoal(goal, ball, teams, latestScoredTeamIndex);
     }
 
     return someoneScored;
 }
 
-static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase)
+static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase, uint16_t* phaseCountDown, uint8_t* latestScoredTeamIndex)
 {
-    bool someoneScored = checkGoals(g_nlConstants.goals, 2, ball, teams);
-    if (someoneScored) {
-        *phase = NlGamePhasePostGame;
+    bool someoneScored = checkGoals(g_nlConstants.goals, 2, ball, teams, latestScoredTeamIndex);
+    if (!someoneScored) {
+        return;
     }
+
+    *phase = NlGamePhaseAfterAGoal;
+    *phaseCountDown = 62 * 4;
 }
 
 static void tickKick(NlAvatars* avatars, NlBall* ball)
@@ -361,13 +374,108 @@ static void tickKick(NlAvatars* avatars, NlBall* ball)
     }
 }
 
+static void checkEndOfMatchTime(NlGame* self)
+{
+    if (self->matchClockLeftInTicks > 0) {
+        self->matchClockLeftInTicks--;
+        return;
+    }
+
+    self->phase = NlGamePhasePostGame;
+    self->phaseCountDown = 62 * 6;
+}
+
+
 static void tickPlaying(NlGame* self)
 {
+    checkEndOfMatchTime(self);
     tickAvatars(&self->avatars);
     tickDribble(&self->avatars, &self->ball);
     tickKick(&self->avatars, &self->ball);
     tickBall(&self->ball);
-    tickGoalCheck(&self->teams,  &self->ball, &self->phase);
+    tickGoalCheck(&self->teams,  &self->ball, &self->phase, &self->phaseCountDown, &self->latestScoredTeamIndex);
+}
+
+static void resetAvatarsToStartPositions(NlAvatars* avatars)
+{
+    int placedInEachTeam[2] = {0,0};
+    const int avatarCountInEachRow = 4;
+
+    for (size_t i=0; i<avatars->avatarCount; ++i) {
+        NlAvatar* avatar = &avatars->avatars[i];
+        int placed = placedInEachTeam[avatar->teamIndex]++;
+
+        int rowIndex = placed / avatarCountInEachRow;
+        int colIndex = placed % avatarCountInEachRow;
+
+        int columnFactor = avatar->teamIndex ? 1 : -1;
+
+        int column = (20 + colIndex * 40) * columnFactor;
+        int row = rowIndex * 40;
+
+        const int centerLine = arenaWidth / 2;
+        column = centerLine + column;
+
+        const int rowOffset = 50;
+        float rotation = avatar->teamIndex ? -BL_PI : 0.f;
+        avatar->visualRotation = rotation;
+        avatar->circle.center.x = column;
+        avatar->circle.center.y = row + rowOffset;
+        avatar->velocity = blVector2Zero();
+        avatar->dribbleCooldown = 0;
+        avatar->kickCooldown = 0;
+        avatar->kickPower = 0;
+        avatar->requestedVelocity = blVector2Zero();
+        avatar->requestBuildKickPower = false;
+    }
+}
+
+static void resetBallToMiddlePosition(NlBall *ball)
+{
+    ball->circle.center.x = arenaWidth / 2;
+    ball->circle.center.y = arenaHeight / 2;
+    ball->velocity = blVector2Zero();
+}
+
+static void resetPitchAndStartCountdown(NlGame* self)
+{
+    resetAvatarsToStartPositions(&self->avatars);
+    resetBallToMiddlePosition(&self->ball);
+
+    self->phaseCountDown = 62 * 3;
+    self->phase = NlGamePhaseCountDown;
+}
+
+static void tickAfterGoal(NlGame* self)
+{
+    if (self->phaseCountDown > 0) {
+        self->phaseCountDown--;
+        return;
+    }
+
+    resetPitchAndStartCountdown(self);
+}
+
+
+static void resetForNewMatch(NlGame *self)
+{
+    for (size_t i=0; i<self->teams.teamCount; ++i) {
+        self->teams.teams[i].score = 0;
+    }
+
+    self->matchClockLeftInTicks = g_nlConstants.matchDurationInTicks;
+
+    resetPitchAndStartCountdown(self);
+}
+
+static void tickPostGame(NlGame *self)
+{
+    if (self->phaseCountDown > 0) {
+        self->phaseCountDown--;
+        return;
+    }
+
+    resetForNewMatch(self);
 }
 
 void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log)
@@ -386,7 +494,11 @@ void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Cl
         case NlGamePhasePlaying:
             tickPlaying(self);
             break;
+        case NlGamePhaseAfterAGoal:
+            tickAfterGoal(self);
+            break;
         case NlGamePhasePostGame:
+            tickPostGame(self);
             break;
     }
 }
