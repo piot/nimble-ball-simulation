@@ -30,5 +30,5 @@ UTEST(NimbleBall, verify)
 
     nlGameTick(&game, &singleInput, 1, &subLog);
     ASSERT_EQ(NlGamePhaseCountDown, game.phase);
-    ASSERT_EQ(62 * 3 - 1, game.countDown);
+    ASSERT_EQ(62 * 3 - 1, game.phaseCountDown);
 }

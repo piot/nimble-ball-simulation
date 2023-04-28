@@ -12,20 +12,46 @@ const float arenaWidth = 640;
 const float arenaHeight = 360;
 
 const NlConstants g_nlConstants = {
-    0, 0, 180-goalSize/2, goalDetectWidth, goalSize, false,
-    1, arenaWidth-goalDetectWidth, 180-goalSize/2, goalDetectWidth, goalSize, true,
-    goalDetectWidth,0,arenaWidth-1-goalDetectWidth,0, // lower line segment
-    goalDetectWidth,arenaHeight-1,arenaWidth-goalDetectWidth,arenaHeight-1, // upper line segment
+    0,
+    0,
+    180 - goalSize / 2,
+    goalDetectWidth,
+    goalSize,
+    false,
+    1,
+    arenaWidth - goalDetectWidth,
+    180 - goalSize / 2,
+    goalDetectWidth,
+    goalSize,
+    true,
+    goalDetectWidth,
+    0,
+    arenaWidth - 1 - goalDetectWidth,
+    0, // lower line segment
+    goalDetectWidth,
+    arenaHeight - 1,
+    arenaWidth - goalDetectWidth,
+    arenaHeight - 1, // upper line segment
 
-    goalDetectWidth,arenaHeight-1,goalDetectWidth,arenaHeight/2+goalSize/2, // upper left
-    goalDetectWidth,0,goalDetectWidth,arenaHeight/2-goalSize/2, // lower left
+    goalDetectWidth,
+    arenaHeight - 1,
+    goalDetectWidth,
+    arenaHeight / 2 + goalSize / 2, // upper left
+    goalDetectWidth,
+    0,
+    goalDetectWidth,
+    arenaHeight / 2 - goalSize / 2, // lower left
 
-    arenaWidth-1-goalDetectWidth,arenaHeight-1,arenaWidth-1-goalDetectWidth,arenaHeight/2+goalSize/2, // upper right
-    arenaWidth-1-goalDetectWidth,0,arenaWidth-1-goalDetectWidth,arenaHeight/2-goalSize/2, //
-    (int)(62.5f * 10.0f),// matchDuration
+    arenaWidth - 1 - goalDetectWidth,
+    arenaHeight - 1,
+    arenaWidth - 1 - goalDetectWidth,
+    arenaHeight / 2 + goalSize / 2, // upper right
+    arenaWidth - 1 - goalDetectWidth,
+    0,
+    arenaWidth - 1 - goalDetectWidth,
+    arenaHeight / 2 - goalSize / 2, //
+    (int) (62.5f * 10.0f),          // matchDuration
 };
-
-
 
 void nlGameInit(NlGame* self)
 {
@@ -62,7 +88,8 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         NlPlayer* player = &self->players.players[i];
         size_t avatarIndex = self->avatars.avatarCount++;
         NlAvatar* avatar = &self->avatars.avatars[avatarIndex];
-        avatar->circle.center.x = player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f : goalDetectWidth + 40.0f;
+        avatar->circle.center.x = player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
+                                                               : goalDetectWidth + 40.0f;
         avatar->circle.center.y = i * 40.0 + goalDetectWidth + 20.0f;
         avatar->circle.radius = 20.0f;
         avatar->controlledByPlayerIndex = i;
@@ -85,7 +112,7 @@ static void collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float s
 {
     BlCircle circleCheck = *circle;
     circleCheck.radius = circle->radius + safeDistance;
-    for (size_t i=0 ; i<sizeof(g_nlConstants.borderSegments) / sizeof(g_nlConstants.borderSegments[0]); ++i) {
+    for (size_t i = 0; i < sizeof(g_nlConstants.borderSegments) / sizeof(g_nlConstants.borderSegments[0]); ++i) {
         BlLineSegment lineSegmentToCheck = g_nlConstants.borderSegments[i];
         BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, circleCheck);
         if (collision.depth > 0) {
@@ -213,8 +240,8 @@ static void tickBall(NlBall* ball)
 
 static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
 {
-    for (size_t i=0; i<players->playerCount; ++i) {
-        NlPlayer * player = &players->players[i];
+    for (size_t i = 0; i < players->playerCount; ++i) {
+        NlPlayer* player = &players->players[i];
         if (player->controllingAvatarIndex < 0) {
             continue;
         }
@@ -230,24 +257,21 @@ static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
         avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
         avatar->requestBuildKickPower = inGameInput->passButton;
     }
-
 }
-
-
 
 static void tickAvatars(NlAvatars* avatars)
 {
-    for (size_t i=0; i<avatars->avatarCount; ++i) {
+    for (size_t i = 0; i < avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
 
         float speedFactor = avatar->kickPower > 0 ? 0.2f : 1.0f;
         avatar->velocity = blVector2AddScale(avatar->velocity, avatar->requestedVelocity, speedFactor);
 
         const float maxAvatarSpeed = 50.0f;
-        if (blVector2SquareLength(avatar->velocity) > maxAvatarSpeed*maxAvatarSpeed) {
-            avatar->velocity = blVector2Scale(blVector2Unit(avatar->velocity),  maxAvatarSpeed);
+        if (blVector2SquareLength(avatar->velocity) > maxAvatarSpeed * maxAvatarSpeed) {
+            avatar->velocity = blVector2Scale(blVector2Unit(avatar->velocity), maxAvatarSpeed);
         }
-        avatar->velocity = blVector2Scale(avatar->velocity,  0.9f);
+        avatar->velocity = blVector2Scale(avatar->velocity, 0.9f);
         avatar->circle.center = blVector2Add(avatar->circle.center, avatar->velocity);
         float length = blVector2SquareLength(avatar->requestedVelocity);
         if (length > 0.001f) {
@@ -265,7 +289,7 @@ static void tickAvatars(NlAvatars* avatars)
 
 static void tickDribble(NlAvatars* avatars, NlBall* ball)
 {
-    for (size_t i=0; i<avatars->avatarCount; ++i) {
+    for (size_t i = 0; i < avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
         if (avatar->dribbleCooldown > 0) {
             avatar->dribbleCooldown--;
@@ -275,7 +299,8 @@ static void tickDribble(NlAvatars* avatars, NlBall* ball)
         dribbleReach.radius = avatar->circle.radius + DRIBBLE_REACH_EXTRA;
         if (blCircleOverlap(dribbleReach, ball->circle)) {
             BlVector2 avatarDirection = blVector2FromAngle(avatar->visualRotation);
-            BlVector2 targetDribblePosition = blVector2AddScale(avatar->circle.center, avatarDirection, DRIBBLE_DISTANCE_FROM_BODY);
+            BlVector2 targetDribblePosition = blVector2AddScale(avatar->circle.center, avatarDirection,
+                                                                DRIBBLE_DISTANCE_FROM_BODY);
             BlVector2 diffFromTargetDribblePosition = blVector2Sub(targetDribblePosition, ball->circle.center);
             ball->circle.center = blVector2AddScale(ball->circle.center, diffFromTargetDribblePosition, 0.2f);
             ball->velocity = blVector2Add(avatar->velocity, blVector2Scale(avatarDirection, 2.0f));
@@ -295,7 +320,7 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
         return;
     }
     BlVector2 avatarDirection = blVector2FromAngle(avatar->visualRotation);
-    float normalizedKickPower = (float)kickPowerTicks / MAX_KICK_POWER_TICKS;
+    float normalizedKickPower = (float) kickPowerTicks / MAX_KICK_POWER_TICKS;
     BlVector2 kickVelocity = blVector2Scale(avatarDirection, normalizedKickPower * 10.0f + 1.0f);
     ball->velocity = blVector2Add(avatar->velocity, kickVelocity);
     collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
@@ -329,10 +354,11 @@ static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams, ui
     return true;
 }
 
-static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball, NlTeams* teams, uint8_t* latestScoredTeamIndex)
+static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball, NlTeams* teams,
+                       uint8_t* latestScoredTeamIndex)
 {
     bool someoneScored = false;
-    for (size_t i =0 ; i< goalCount; ++i) {
+    for (size_t i = 0; i < goalCount; ++i) {
         const NlGoal* goal = &goals[i];
         someoneScored |= checkGoal(goal, ball, teams, latestScoredTeamIndex);
     }
@@ -340,7 +366,8 @@ static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball
     return someoneScored;
 }
 
-static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase, uint16_t* phaseCountDown, uint8_t* latestScoredTeamIndex)
+static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase, uint16_t* phaseCountDown,
+                          uint8_t* latestScoredTeamIndex)
 {
     bool someoneScored = checkGoals(g_nlConstants.goals, 2, ball, teams, latestScoredTeamIndex);
     if (!someoneScored) {
@@ -353,7 +380,7 @@ static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase, uint
 
 static void tickKick(NlAvatars* avatars, NlBall* ball)
 {
-    for (size_t i=0; i<avatars->avatarCount; ++i) {
+    for (size_t i = 0; i < avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
         if (avatar->kickCooldown > 0) {
             avatar->kickCooldown--;
@@ -385,7 +412,6 @@ static void checkEndOfMatchTime(NlGame* self)
     self->phaseCountDown = 62 * 6;
 }
 
-
 static void tickPlaying(NlGame* self)
 {
     checkEndOfMatchTime(self);
@@ -393,15 +419,15 @@ static void tickPlaying(NlGame* self)
     tickDribble(&self->avatars, &self->ball);
     tickKick(&self->avatars, &self->ball);
     tickBall(&self->ball);
-    tickGoalCheck(&self->teams,  &self->ball, &self->phase, &self->phaseCountDown, &self->latestScoredTeamIndex);
+    tickGoalCheck(&self->teams, &self->ball, &self->phase, &self->phaseCountDown, &self->latestScoredTeamIndex);
 }
 
 static void resetAvatarsToStartPositions(NlAvatars* avatars)
 {
-    int placedInEachTeam[2] = {0,0};
+    int placedInEachTeam[2] = {0, 0};
     const int avatarCountInEachRow = 4;
 
-    for (size_t i=0; i<avatars->avatarCount; ++i) {
+    for (size_t i = 0; i < avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
         int placed = placedInEachTeam[avatar->teamIndex]++;
 
@@ -430,7 +456,7 @@ static void resetAvatarsToStartPositions(NlAvatars* avatars)
     }
 }
 
-static void resetBallToMiddlePosition(NlBall *ball)
+static void resetBallToMiddlePosition(NlBall* ball)
 {
     ball->circle.center.x = arenaWidth / 2;
     ball->circle.center.y = arenaHeight / 2;
@@ -456,10 +482,9 @@ static void tickAfterGoal(NlGame* self)
     resetPitchAndStartCountdown(self);
 }
 
-
-static void resetForNewMatch(NlGame *self)
+static void resetForNewMatch(NlGame* self)
 {
-    for (size_t i=0; i<self->teams.teamCount; ++i) {
+    for (size_t i = 0; i < self->teams.teamCount; ++i) {
         self->teams.teams[i].score = 0;
     }
 
@@ -468,7 +493,7 @@ static void resetForNewMatch(NlGame *self)
     resetPitchAndStartCountdown(self);
 }
 
-static void tickPostGame(NlGame *self)
+static void tickPostGame(NlGame* self)
 {
     if (self->phaseCountDown > 0) {
         self->phaseCountDown--;
