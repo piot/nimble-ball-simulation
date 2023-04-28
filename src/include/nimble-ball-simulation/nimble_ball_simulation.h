@@ -29,7 +29,7 @@ typedef struct NlConstants {
     uint16_t matchDurationInTicks;
 } NlConstants;
 
-const NlConstants g_nlConstants;
+extern const NlConstants g_nlConstants;
 
 typedef struct NlPlayerInGameInput {
     int verticalAxis;
