@@ -70,6 +70,9 @@ void nlSimulationVmInit(NlSimulationVm* self, Clog log)
 {
     TransmuteVmSetup transmuteVmSetup;
 
+    transmuteVmSetup.version.major = 0;
+    transmuteVmSetup.version.minor = 0;
+    transmuteVmSetup.version.patch = 43;
     transmuteVmSetup.inputToString = inputToString;
     transmuteVmSetup.stateToString = stateToString;
     transmuteVmSetup.getStateFn = getState;

@@ -53,6 +53,13 @@ const NlConstants g_nlConstants = {
     (int) (62.5f * 10.0f),          // matchDuration
 };
 
+static void resetBallToMiddlePosition(NlBall* ball)
+{
+    ball->circle.center.x = arenaWidth / 2;
+    ball->circle.center.y = arenaHeight / 2;
+    ball->velocity = blVector2Zero();
+}
+
 void nlGameInit(NlGame* self)
 {
     self->phase = NlGamePhaseWaitingForPlayers;
@@ -66,16 +73,15 @@ void nlGameInit(NlGame* self)
 
     self->arena.halfLineX = 100;
 
-    self->ball.circle.center.x = 100.0f;
-    self->ball.circle.center.y = 50.0f;
     self->ball.circle.radius = 10.0f;
+    resetBallToMiddlePosition(&self->ball);
 
     self->ball.velocity.x = 2.0f;
     self->ball.velocity.y = 4.0f;
 
     self->teams.teamCount = 2;
     self->teams.teams[0].score = 0;
-    self->teams.teams[1].score = 0;
+    self->teams.teams[1].score = 99;
 
     self->tickCount = 0;
     self->matchClockLeftInTicks = g_nlConstants.matchDurationInTicks;
@@ -454,13 +460,6 @@ static void resetAvatarsToStartPositions(NlAvatars* avatars)
         avatar->requestedVelocity = blVector2Zero();
         avatar->requestBuildKickPower = false;
     }
-}
-
-static void resetBallToMiddlePosition(NlBall* ball)
-{
-    ball->circle.center.x = arenaWidth / 2;
-    ball->circle.center.y = arenaHeight / 2;
-    ball->velocity = blVector2Zero();
 }
 
 static void resetPitchAndStartCountdown(NlGame* self)
