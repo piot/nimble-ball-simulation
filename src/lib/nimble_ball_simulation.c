@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 #include "basal/math.h"
-#include <basal/basal_line_segment.h>
+#include <basal/line_segment.h>
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 
 const float goalSize = 90;
@@ -261,7 +261,7 @@ static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
         requestVelocity.x = inGameInput->horizontalAxis;
         requestVelocity.y = inGameInput->verticalAxis;
         avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
-        avatar->requestBuildKickPower = inGameInput->passButton;
+        avatar->requestBuildKickPower = inGameInput->buttons & 0x01;
     }
 }
 

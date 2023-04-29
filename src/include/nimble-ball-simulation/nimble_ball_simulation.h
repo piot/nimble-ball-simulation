@@ -12,10 +12,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <basal/vector2.h>
-#include <basal/basal_rect2.h>
+#include <basal/rect2.h>
 #include <basal/circle.h>
 #include <basal/rect.h>
-#include <basal/basal_line_segment.h>
+#include <basal/line_segment.h>
 
 typedef struct NlGoal {
     int ownedByTeam;
@@ -32,14 +32,13 @@ typedef struct NlConstants {
 extern const NlConstants g_nlConstants;
 
 typedef struct NlPlayerInGameInput {
-    int verticalAxis;
-    int horizontalAxis;
-    bool passButton;
-    bool exertButton;
+    int8_t verticalAxis;
+    int8_t horizontalAxis;
+    uint8_t buttons;
 } NlPlayerInGameInput;
 
 typedef struct NlPlayerSelectTeam {
-    int preferredTeamToJoin;
+    uint8_t preferredTeamToJoin;
 } NlPlayerSelectTeam;
 
 typedef enum NlPlayerInputType {
@@ -50,7 +49,7 @@ typedef enum NlPlayerInputType {
 
 typedef struct NlPlayerInput {
     uint8_t participantId;
-    NlPlayerInputType inputType;
+    uint8_t inputType;
     union {
         NlPlayerInGameInput inGameInput;
         NlPlayerSelectTeam selectTeam;
