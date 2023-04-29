@@ -6,16 +6,16 @@
 #define NIMBLE_BALL_SIMULATION_H
 
 #define NL_MAX_PLAYERS (16)
-#define NL_MAX_PARTICIPANTS (32)
+#define NL_MAX_PARTICIPANTS (16)
 
+#include <basal/circle.h>
+#include <basal/line_segment.h>
+#include <basal/rect.h>
+#include <basal/rect2.h>
+#include <basal/vector2.h>
 #include <clog/clog.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <basal/vector2.h>
-#include <basal/rect2.h>
-#include <basal/circle.h>
-#include <basal/rect.h>
-#include <basal/line_segment.h>
 
 typedef struct NlGoal {
     int ownedByTeam;
@@ -57,17 +57,16 @@ typedef struct NlPlayerInput {
 } NlPlayerInput;
 
 typedef struct NlParticipant {
-    int participantId;
-    size_t playerIndex;
+    uint8_t participantId;
+    uint8_t playerIndex;
     bool isUsed;
     bool internalMarked;
 } NlParticipant;
 
-
 typedef struct NlPlayer {
-    int preferredTeamId;
-    int controllingAvatarIndex;
-    int assignedToParticipantIndex;
+    uint8_t preferredTeamId;
+    uint8_t controllingAvatarIndex;
+    uint8_t assignedToParticipantIndex;
     NlPlayerInput playerInput;
 } NlPlayer;
 
@@ -79,12 +78,12 @@ typedef struct NlTeam {
 
 typedef struct NlTeams {
     NlTeam teams[NL_MAX_TEAMS];
-    size_t teamCount;
+    uint8_t teamCount;
 } NlTeams;
 
 typedef struct NlPlayers {
     NlPlayer players[NL_MAX_PLAYERS];
-    size_t playerCount;
+    uint8_t playerCount;
 } NlPlayers;
 
 typedef struct NlAvatar {
@@ -92,7 +91,7 @@ typedef struct NlAvatar {
     BlVector2 requestedVelocity;
     BlVector2 velocity;
     float visualRotation;
-    size_t controlledByPlayerIndex;
+    uint8_t controlledByPlayerIndex;
     uint8_t dribbleCooldown;
     uint8_t kickCooldown;
     bool requestBuildKickPower;
@@ -102,7 +101,7 @@ typedef struct NlAvatar {
 
 typedef struct NlAvatars {
     NlAvatar avatars[NL_MAX_PLAYERS];
-    size_t avatarCount;
+    uint8_t avatarCount;
 } NlAvatars;
 
 typedef enum NlGamePhase {
@@ -113,27 +112,21 @@ typedef enum NlGamePhase {
     NlGamePhasePostGame,
 } NlGamePhase;
 
-typedef struct NlArena {
-    int halfLineX;
-} NlArena;
-
 typedef struct NlBall {
     BlCircle circle;
     BlVector2 velocity;
 } NlBall;
 
-
 typedef struct NlGame {
     NlParticipant participantLookup[NL_MAX_PARTICIPANTS];
-    size_t lastParticipantLookupCount;
+    uint8_t lastParticipantLookupCount;
     NlPlayers players;
-    NlTeams teams;
     NlAvatars avatars;
-    NlGamePhase phase;
-    uint16_t phaseCountDown;
-    NlArena arena;
+    NlTeams teams;
     NlBall ball;
-    size_t tickCount;
+    uint8_t phase;
+    uint16_t phaseCountDown;
+    uint16_t tickCount;
     uint16_t matchClockLeftInTicks;
     uint8_t latestScoredTeamIndex;
 } NlGame;

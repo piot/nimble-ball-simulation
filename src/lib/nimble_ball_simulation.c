@@ -71,8 +71,6 @@ void nlGameInit(NlGame* self)
     }
     self->lastParticipantLookupCount = 0;
 
-    self->arena.halfLineX = 100;
-
     self->ball.circle.radius = 10.0f;
     resetBallToMiddlePosition(&self->ball);
 
@@ -248,7 +246,7 @@ static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
 {
     for (size_t i = 0; i < players->playerCount; ++i) {
         NlPlayer* player = &players->players[i];
-        if (player->controllingAvatarIndex < 0) {
+        if (player->controllingAvatarIndex == 0xff) {
             continue;
         }
         if (player->playerInput.inputType != NlPlayerInputTypeInGame) {
@@ -372,7 +370,7 @@ static bool checkGoals(const NlGoal* goals, size_t goalCount, const NlBall* ball
     return someoneScored;
 }
 
-static void tickGoalCheck(NlTeams* teams, NlBall* ball, NlGamePhase* phase, uint16_t* phaseCountDown,
+static void tickGoalCheck(NlTeams* teams, NlBall* ball, uint8_t* phase, uint16_t* phaseCountDown,
                           uint8_t* latestScoredTeamIndex)
 {
     bool someoneScored = checkGoals(g_nlConstants.goals, 2, ball, teams, latestScoredTeamIndex);
