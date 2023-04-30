@@ -50,7 +50,7 @@ const NlConstants g_nlConstants = {
     0,
     arenaWidth - 1 - goalDetectWidth,
     arenaHeight / 2 - goalSize / 2, //
-    (int) (62.5f * 10.0f),          // matchDuration
+    (int) (62.5f * 20.0f),          // matchDuration
 };
 
 static void resetBallToMiddlePosition(NlBall* ball)
