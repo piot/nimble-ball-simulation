@@ -75,11 +75,11 @@ void nlGameInit(NlGame* self)
     resetBallToMiddlePosition(&self->ball);
 
     self->ball.velocity.x = 2.0f;
-    self->ball.velocity.y = 4.0f;
+    self->ball.velocity.y = 1.6f;
 
     self->teams.teamCount = 2;
     self->teams.teams[0].score = 0;
-    self->teams.teams[1].score = 99;
+    self->teams.teams[1].score = 1;
 
     self->tickCount = 0;
     self->matchClockLeftInTicks = g_nlConstants.matchDurationInTicks;
