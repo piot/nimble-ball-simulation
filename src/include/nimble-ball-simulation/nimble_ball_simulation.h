@@ -94,7 +94,12 @@ typedef struct NlAvatar {
     uint8_t controlledByPlayerIndex;
     uint8_t dribbleCooldown;
     uint8_t kickCooldown;
+    uint8_t slideTackleCooldown;
+    uint8_t slideTackleRemainingTicks;
+
+    float slideTackleRotation;
     bool requestBuildKickPower;
+    bool requestSlideTackle;
     uint8_t kickPower;
     uint8_t teamIndex;
 } NlAvatar;

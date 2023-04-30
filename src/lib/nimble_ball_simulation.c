@@ -53,6 +53,8 @@ const NlConstants g_nlConstants = {
     (int) (62.5f * 20.0f),          // matchDuration
 };
 
+#define SLIDE_TACKLE_DURATION (20)
+
 static void resetBallToMiddlePosition(NlBall* ball)
 {
     ball->circle.center.x = arenaWidth / 2;
@@ -104,6 +106,10 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         avatar->requestedVelocity.x = 0;
         avatar->requestedVelocity.y = 0;
         avatar->teamIndex = player->preferredTeamId;
+        avatar->slideTackleRemainingTicks = 0;
+        avatar->slideTackleCooldown = 0;
+        avatar->slideTackleRotation = 0;
+        avatar->requestSlideTackle = false;
 
         player->controllingAvatarIndex = avatarIndex;
 
@@ -260,6 +266,7 @@ static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
         requestVelocity.y = inGameInput->verticalAxis;
         avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
         avatar->requestBuildKickPower = inGameInput->buttons & 0x01;
+        avatar->requestSlideTackle = inGameInput->buttons & 0x02;
     }
 }
 
@@ -268,8 +275,17 @@ static void tickAvatars(NlAvatars* avatars)
     for (size_t i = 0; i < avatars->avatarCount; ++i) {
         NlAvatar* avatar = &avatars->avatars[i];
 
-        float speedFactor = avatar->kickPower > 0 ? 0.2f : 1.0f;
-        avatar->velocity = blVector2AddScale(avatar->velocity, avatar->requestedVelocity, speedFactor);
+        if (avatar->slideTackleRemainingTicks > 0) {
+            BlVector2 slideUnitDirection = blVector2FromAngle(avatar->slideTackleRotation);
+            float normalizedDuration = (avatar->slideTackleRemainingTicks / SLIDE_TACKLE_DURATION);
+            float slideFactor = normalizedDuration * normalizedDuration * 15.0f;
+            avatar->velocity = blVector2AddScale(avatar->velocity, slideUnitDirection, slideFactor);
+        } else if (avatar->slideTackleCooldown > 0) {
+            avatar->velocity = blVector2Zero();
+        } else {
+            float speedFactor = avatar->kickPower > 0 ? 0.2f : 1.0f;
+            avatar->velocity = blVector2AddScale(avatar->velocity, avatar->requestedVelocity, speedFactor);
+        }
 
         const float maxAvatarSpeed = 50.0f;
         if (blVector2SquareLength(avatar->velocity) > maxAvatarSpeed * maxAvatarSpeed) {
@@ -405,6 +421,26 @@ static void tickKick(NlAvatars* avatars, NlBall* ball)
     }
 }
 
+static void tickSlideTackle(NlAvatars* avatars)
+{
+    for (size_t i = 0; i < avatars->avatarCount; ++i) {
+        NlAvatar* avatar = &avatars->avatars[i];
+        if (avatar->slideTackleRemainingTicks > 0) {
+            avatar->slideTackleRemainingTicks--;
+            continue;
+        }
+        if (avatar->slideTackleCooldown > 0) {
+            avatar->slideTackleCooldown--;
+            continue;
+        }
+        if (avatar->requestSlideTackle) {
+            avatar->slideTackleCooldown = 60;
+            avatar->slideTackleRemainingTicks = SLIDE_TACKLE_DURATION;
+            avatar->slideTackleRotation = avatar->visualRotation;
+        }
+    }
+}
+
 static void checkEndOfMatchTime(NlGame* self)
 {
     if (self->matchClockLeftInTicks > 0) {
@@ -422,6 +458,7 @@ static void tickPlaying(NlGame* self)
     tickAvatars(&self->avatars);
     tickDribble(&self->avatars, &self->ball);
     tickKick(&self->avatars, &self->ball);
+    tickSlideTackle(&self->avatars);
     tickBall(&self->ball);
     tickGoalCheck(&self->teams, &self->ball, &self->phase, &self->phaseCountDown, &self->latestScoredTeamIndex);
 }
@@ -457,6 +494,10 @@ static void resetAvatarsToStartPositions(NlAvatars* avatars)
         avatar->kickPower = 0;
         avatar->requestedVelocity = blVector2Zero();
         avatar->requestBuildKickPower = false;
+        avatar->slideTackleRemainingTicks = 0;
+        avatar->slideTackleCooldown = 0;
+        avatar->slideTackleRotation = 0;
+        avatar->requestSlideTackle = false;
     }
 }
 
