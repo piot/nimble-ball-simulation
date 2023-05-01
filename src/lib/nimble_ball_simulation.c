@@ -60,6 +60,7 @@ static void resetBallToMiddlePosition(NlBall* ball)
     ball->circle.center.x = arenaWidth / 2;
     ball->circle.center.y = arenaHeight / 2;
     ball->velocity = blVector2Zero();
+    ball->collideCounter = 0;
 }
 
 void nlGameInit(NlGame* self)
@@ -110,6 +111,7 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         avatar->slideTackleCooldown = 0;
         avatar->slideTackleRotation = 0;
         avatar->requestSlideTackle = false;
+        avatar->kickedCounter = 0;
 
         player->controllingAvatarIndex = avatarIndex;
 
@@ -118,18 +120,24 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
     }
 }
 
-static void collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float safeDistance, float dampening)
+static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float safeDistance, float dampening)
 {
     BlCircle circleCheck = *circle;
     circleCheck.radius = circle->radius + safeDistance;
+
+    int collisionCount = 0;
+
     for (size_t i = 0; i < sizeof(g_nlConstants.borderSegments) / sizeof(g_nlConstants.borderSegments[0]); ++i) {
         BlLineSegment lineSegmentToCheck = g_nlConstants.borderSegments[i];
         BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, circleCheck);
         if (collision.depth > 0) {
             *velocity = blVector2Scale(blVector2Reflect(*velocity, collision.normal), dampening);
             circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth);
+            collisionCount++;
         }
     }
+
+    return collisionCount;
 }
 
 static void tickWaitingForPlayers(NlGame* self, Clog* log)
@@ -242,7 +250,10 @@ static void tickBall(NlBall* ball)
 
     ball->circle.center = blVector2Add(ball->circle.center, ball->velocity);
 
-    collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
+    int collided = collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
+    if (collided > 0) {
+        ball->collideCounter++;
+    }
     if (blVector2SquareLength(ball->velocity) < MINIMAL_VELOCITY) {
         ball->velocity = blVector2Zero();
     }
@@ -346,6 +357,7 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
     collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
     avatar->kickCooldown = 14;
     avatar->dribbleCooldown = 12;
+    avatar->kickedCounter++;
 }
 
 static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams, uint8_t* latestTeamToScore)

@@ -94,6 +94,7 @@ typedef struct NlAvatar {
     uint8_t controlledByPlayerIndex;
     uint8_t dribbleCooldown;
     uint8_t kickCooldown;
+    uint8_t kickedCounter;
     uint8_t slideTackleCooldown;
     uint8_t slideTackleRemainingTicks;
 
@@ -120,6 +121,7 @@ typedef enum NlGamePhase {
 typedef struct NlBall {
     BlCircle circle;
     BlVector2 velocity;
+    uint8_t collideCounter;
 } NlBall;
 
 typedef struct NlGame {
