@@ -56,11 +56,12 @@ static void tick(void* _self, const TransmuteInput* input)
 {
     NlSimulationVm* self = (NlSimulationVm*) _self;
 
-    NlPlayerInput playerInputs[64];
+    NlPlayerInputWithParticipantInfo playerInputs[64];
 
     for (size_t i = 0; i < input->participantCount; ++i) {
         CLOG_ASSERT(sizeof(NlPlayerInput) == input->participantInputs[i].octetSize, "wrong NlPlayerInput struct");
-        playerInputs[i] = *(const NlPlayerInput*) input->participantInputs[i].input;
+        playerInputs[i].playerInput = *(const NlPlayerInput*) input->participantInputs[i].input;
+        playerInputs[i].participantId = input->participantInputs[i].participantId;
     }
 
     nlGameTick(&self->game, playerInputs, input->participantCount, &self->log);

@@ -194,7 +194,7 @@ static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipan
     participant->isUsed = false;
 }
 
-static void checkInputDiff(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log)
+static void checkInputDiff(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log)
 {
     if (inputCount != self->lastParticipantLookupCount) {
         CLOG_C_VERBOSE(log, "someone has either left or added, count is different %zu vs %zu", inputCount,
@@ -213,7 +213,7 @@ static void checkInputDiff(NlGame* self, const NlPlayerInput* inputs, size_t inp
             participantJoined(&self->players, participant, log);
         }
         if (participant->playerIndex >= 0) {
-            self->players.players[participant->playerIndex].playerInput = inputs[i];
+            self->players.players[participant->playerIndex].playerInput = inputs[i].playerInput;
         }
         participant->internalMarked = true;
     }
@@ -549,7 +549,7 @@ static void tickPostGame(NlGame* self)
     resetForNewMatch(self);
 }
 
-void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log)
+void nlGameTick(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log)
 {
     checkInputDiff(self, inputs, inputCount, log);
     playerToAvatarControl(&self->players, &self->avatars);

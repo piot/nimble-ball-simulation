@@ -47,14 +47,20 @@ typedef enum NlPlayerInputType {
     NlPlayerInputTypeSelectTeam,
 } NlPlayerInputType;
 
+
+
 typedef struct NlPlayerInput {
-    uint8_t participantId;
     uint8_t inputType;
     union {
         NlPlayerInGameInput inGameInput;
         NlPlayerSelectTeam selectTeam;
     } input;
 } NlPlayerInput;
+
+typedef struct NlPlayerInputWithParticipantInfo {
+    uint8_t participantId;
+    NlPlayerInput playerInput;
+} NlPlayerInputWithParticipantInfo;
 
 typedef struct NlParticipant {
     uint8_t participantId;
@@ -139,6 +145,6 @@ typedef struct NlGame {
 } NlGame;
 
 void nlGameInit(NlGame* self);
-void nlGameTick(NlGame* self, const NlPlayerInput* inputs, size_t inputCount, Clog* log);
+void nlGameTick(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log);
 
 #endif
