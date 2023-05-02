@@ -8,49 +8,45 @@
 
 const float goalSize = 90;
 const float goalDetectWidth = 40;
-const float arenaWidth = 640;
-const float arenaHeight = 360;
+
+const float screenWidth = 640;
+
+const float spacing = 6.0f;
+const float arenaLeft = goalDetectWidth + spacing;
+const float arenaWidth = screenWidth - arenaLeft - spacing;
+const float arenaHeight = 280;
+
+const float arenaLineBottom = 20;
+const float arenaLineTop = arenaLineBottom + arenaHeight;
+const float arenaHeightMiddle = arenaLineBottom + arenaHeight / 2;
+const float arenaRight = arenaLeft + arenaWidth - 1;
 
 const NlConstants g_nlConstants = {
-    0,
-    0,
-    180 - goalSize / 2,
-    goalDetectWidth,
-    goalSize,
-    false,
-    1,
-    arenaWidth - goalDetectWidth,
-    180 - goalSize / 2,
-    goalDetectWidth,
-    goalSize,
-    true,
-    goalDetectWidth,
-    0,
-    arenaWidth - 1 - goalDetectWidth,
-    0, // lower line segment
-    goalDetectWidth,
-    arenaHeight - 1,
-    arenaWidth - goalDetectWidth,
-    arenaHeight - 1, // upper line segment
+    // Goal 0
+    0, arenaLeft - goalDetectWidth, arenaHeightMiddle - goalSize / 2, goalDetectWidth, goalSize, false,
 
-    goalDetectWidth,
-    arenaHeight - 1,
-    goalDetectWidth,
-    arenaHeight / 2 + goalSize / 2, // upper left
-    goalDetectWidth,
-    0,
-    goalDetectWidth,
-    arenaHeight / 2 - goalSize / 2, // lower left
+    // Goal 1
+    1, arenaRight - goalDetectWidth, arenaHeightMiddle - goalSize / 2, goalDetectWidth, goalSize, true,
 
-    arenaWidth - 1 - goalDetectWidth,
-    arenaHeight - 1,
-    arenaWidth - 1 - goalDetectWidth,
-    arenaHeight / 2 + goalSize / 2, // upper right
-    arenaWidth - 1 - goalDetectWidth,
-    0,
-    arenaWidth - 1 - goalDetectWidth,
-    arenaHeight / 2 - goalSize / 2, //
-    (int) (62.5f * 20.0f),          // matchDuration
+    arenaLeft, arenaLineBottom, arenaRight - goalDetectWidth,
+    arenaLineBottom, // lower line segment
+
+    arenaLeft, arenaLineTop, arenaRight - goalDetectWidth,
+    arenaLineTop, // upper line segment
+
+    arenaLeft, arenaLineTop, arenaLeft,
+    arenaHeightMiddle + goalSize / 2, // upper left
+
+    arenaLeft, arenaLineBottom, arenaLeft,
+    arenaHeightMiddle - goalSize / 2, // lower left
+
+    arenaRight - goalDetectWidth, arenaLineTop, arenaRight - goalDetectWidth,
+    arenaHeightMiddle + goalSize / 2, // upper right
+
+    arenaRight - goalDetectWidth, arenaLineBottom, arenaRight - goalDetectWidth,
+    arenaHeightMiddle - goalSize / 2, //
+
+    (int) (62.5f * 20.0f),            // matchDuration
 };
 
 #define SLIDE_TACKLE_DURATION (20)
@@ -132,7 +128,7 @@ static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float sa
         BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, circleCheck);
         if (collision.depth > 0) {
             *velocity = blVector2Scale(blVector2Reflect(*velocity, collision.normal), dampening);
-            circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth);
+            circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth + 0.1);
             collisionCount++;
         }
     }
