@@ -42,12 +42,11 @@ typedef struct NlPlayerSelectTeam {
 } NlPlayerSelectTeam;
 
 typedef enum NlPlayerInputType {
+    NlPlayerInputTypeForced,
     NlPlayerInputTypeNone,
     NlPlayerInputTypeInGame,
     NlPlayerInputTypeSelectTeam,
 } NlPlayerInputType;
-
-
 
 typedef struct NlPlayerInput {
     uint8_t inputType;

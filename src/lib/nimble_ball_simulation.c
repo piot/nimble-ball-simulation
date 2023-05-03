@@ -108,6 +108,7 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         avatar->slideTackleRotation = 0;
         avatar->requestSlideTackle = false;
         avatar->kickedCounter = 0;
+        avatar->visualRotation = 0;
 
         player->controllingAvatarIndex = avatarIndex;
 
@@ -305,7 +306,7 @@ static void tickAvatars(NlAvatars* avatars)
             float target = blVector2ToAngle(avatar->requestedVelocity);
             float angleDiff = blAngleMinimalDiff(target, avatar->visualRotation);
             avatar->visualRotation += angleDiff * 0.1f;
-        }
+    }
 
         collideAgainstBorders(&avatar->circle, &avatar->velocity, 10.0f, 0);
     }
