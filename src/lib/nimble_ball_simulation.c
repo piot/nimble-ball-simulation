@@ -323,20 +323,20 @@ static void tickAvatars(NlAvatars* avatars)
         if (avatar->slideTackleRemainingTicks > 0) {
             BlVector2 slideUnitDirection = blVector2FromAngle(avatar->slideTackleRotation);
             float normalizedDuration = (avatar->slideTackleRemainingTicks / SLIDE_TACKLE_DURATION);
-            float slideFactor = normalizedDuration * normalizedDuration * 15.0f;
+            float slideFactor = normalizedDuration * normalizedDuration * 8.0f;
             avatar->velocity = blVector2AddScale(avatar->velocity, slideUnitDirection, slideFactor);
         } else if (avatar->slideTackleCooldown > 0) {
             avatar->velocity = blVector2Zero();
         } else {
-            float speedFactor = avatar->kickPower > 0 ? 0.2f : 1.0f;
+            float speedFactor = avatar->kickPower > 0 ? 0.05f : 0.2f;
             avatar->velocity = blVector2AddScale(avatar->velocity, avatar->requestedVelocity, speedFactor);
         }
 
-        const float maxAvatarSpeed = 50.0f;
+        const float maxAvatarSpeed = 60.0f;
         if (blVector2SquareLength(avatar->velocity) > maxAvatarSpeed * maxAvatarSpeed) {
             avatar->velocity = blVector2Scale(blVector2Unit(avatar->velocity), maxAvatarSpeed);
         }
-        avatar->velocity = blVector2Scale(avatar->velocity, 0.9f);
+        avatar->velocity = blVector2Scale(avatar->velocity, 0.98f);
         avatar->circle.center = blVector2Add(avatar->circle.center, avatar->velocity);
         float length = blVector2SquareLength(avatar->requestedVelocity);
         if (length > 0.001f) {
