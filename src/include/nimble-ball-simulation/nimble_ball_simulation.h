@@ -69,6 +69,7 @@ typedef struct NlParticipant {
 } NlParticipant;
 
 typedef struct NlPlayer {
+    uint8_t playerIndex;
     uint8_t preferredTeamId;
     uint8_t controllingAvatarIndex;
     uint8_t assignedToParticipantIndex;
@@ -92,6 +93,7 @@ typedef struct NlPlayers {
 } NlPlayers;
 
 typedef struct NlAvatar {
+    uint8_t avatarIndex;
     BlCircle circle;
     BlVector2 requestedVelocity;
     BlVector2 velocity;

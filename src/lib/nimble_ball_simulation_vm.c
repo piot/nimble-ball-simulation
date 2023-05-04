@@ -63,7 +63,6 @@ static void tick(void* _self, const TransmuteInput* input)
             // This is a forced step. Represent that in a game specific way
             tc_mem_clear_type(&playerInputs[i].playerInput);
             playerInputs[i].playerInput.inputType = NlPlayerInputTypeForced;
-            CLOG_C_NOTICE(&self->log, "INSERTING FORCED STEP!")
         } else {
             CLOG_ASSERT(sizeof(NlPlayerInput) == input->participantInputs[i].octetSize, "wrong NlPlayerInput struct");
             playerInputs[i].playerInput = *(const NlPlayerInput*) input->participantInputs[i].input;
