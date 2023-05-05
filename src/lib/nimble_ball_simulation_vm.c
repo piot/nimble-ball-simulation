@@ -8,7 +8,7 @@ static TransmuteState getState(const void* _self)
 {
     TransmuteState state;
 
-    NlSimulationVm* self = (NlSimulationVm*) _self;
+    const NlSimulationVm* self = (const NlSimulationVm*) _self;
 
     state.octetSize = sizeof(NlGame);
     state.state = (const void*) &self->game;
@@ -29,15 +29,15 @@ static int stateToString(void* _self, const TransmuteState* state, char* target,
 {
     (void) _self;
 
-    const NlGame* appState = (NlGame*) state->state;
-    return tc_snprintf(target, maxTargetOctetSize, "state: tick: %zu ball-pos: %.1f, %.1f", appState->tickCount,
+    const NlGame* appState = (const NlGame*) state->state;
+    return tc_snprintf(target, maxTargetOctetSize, "state: tick: %hu ball-pos: %.1f, %.1f", appState->tickCount,
                        appState->ball.circle.center.x, appState->ball.circle.center.y);
 }
 
 static int inputToString(void* _self, const TransmuteParticipantInput* input, char* target, size_t maxTargetOctetSize)
 {
     (void) _self;
-    const NlPlayerInput* participantInput = (NlPlayerInput*) input->input;
+    const NlPlayerInput* participantInput = (const NlPlayerInput*) input->input;
     switch (participantInput->inputType) {
         case NlPlayerInputTypeSelectTeam:
             return tc_snprintf(target, maxTargetOctetSize, "input: select team: %d",

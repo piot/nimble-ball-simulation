@@ -36,21 +36,21 @@ UTEST(NimbleBall, testvm)
 
     TransmuteInput input;
 
-    NlPlayerInput playerInputs[2];
-    playerInputs[0].inputType = NlPlayerInputTypeInGame;
-    playerInputs[0].input.inGameInput.horizontalAxis = 33;
+    NlPlayerInputWithParticipantInfo playerInputs[2];
+    playerInputs[0].playerInput.inputType = NlPlayerInputTypeInGame;
+    playerInputs[0].playerInput.input.inGameInput.horizontalAxis = 33;
     playerInputs[0].participantId = 13;
 
-    playerInputs[1].inputType = NlPlayerInputTypeSelectTeam;
-    playerInputs[1].input.selectTeam.preferredTeamToJoin = 1;
+    playerInputs[1].playerInput.inputType = NlPlayerInputTypeSelectTeam;
+    playerInputs[1].playerInput.input.selectTeam.preferredTeamToJoin = 1;
     playerInputs[1].participantId = 2;
 
     TransmuteParticipantInput participantInputs[2];
-    participantInputs[0].octetSize = sizeof(NlPlayerInput);
+    participantInputs[0].octetSize = sizeof(NlPlayerInputWithParticipantInfo);
     participantInputs[0].input = &playerInputs[0];
     participantInputs[0].participantId = playerInputs[0].participantId;
 
-    participantInputs[1].octetSize = sizeof(NlPlayerInput);
+    participantInputs[1].octetSize = sizeof(NlPlayerInputWithParticipantInfo);
     participantInputs[1].input = &playerInputs[1];
     participantInputs[1].participantId = playerInputs[1].participantId;
 

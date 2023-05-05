@@ -14,9 +14,9 @@ UTEST(NimbleBall, verify)
     ASSERT_EQ(0, game.avatars.avatarCount);
     ASSERT_EQ(NlGamePhaseWaitingForPlayers, game.phase);
 
-    NlPlayerInput singleInput;
+    NlPlayerInputWithParticipantInfo singleInput;
     singleInput.participantId = 3;
-    singleInput.input.inGameInput.horizontalAxis = -99;
+    singleInput.playerInput.input.inGameInput.horizontalAxis = -99;
 
     Clog subLog;
 
