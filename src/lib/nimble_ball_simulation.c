@@ -2,7 +2,7 @@
  *  Copyright (c) Peter Bjorklund. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-#include "basal/math.h"
+#include <basal/math.h>
 #include <basal/line_segment.h>
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 
