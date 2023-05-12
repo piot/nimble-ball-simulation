@@ -17,6 +17,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+static const uint8_t NL_TEAM_UNDEFINED = 0xff;
+static const uint8_t NL_AVATAR_INDEX_UNDEFINED = 0xff;
+
 typedef struct NlGoal {
     int ownedByTeam;
     BlRect rect;
@@ -68,12 +71,19 @@ typedef struct NlParticipant {
     bool internalMarked;
 } NlParticipant;
 
+typedef enum NlPlayerPhase {
+    NlPlayerPhaseSelectTeam,
+    NlPlayerPhaseCommittedToTeam,
+    NlPlayerPhasePlaying
+} NlPlayerPhase;
+
 typedef struct NlPlayer {
     uint8_t playerIndex;
     uint8_t preferredTeamId;
     uint8_t controllingAvatarIndex;
     uint8_t assignedToParticipantIndex;
     NlPlayerInput playerInput;
+    NlPlayerPhase phase;
 } NlPlayer;
 
 #define NL_MAX_TEAMS (2)
@@ -147,5 +157,6 @@ typedef struct NlGame {
 
 void nlGameInit(NlGame* self);
 void nlGameTick(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log);
+const NlPlayer* nlGameFindSimulationPlayerFromParticipantId(const NlGame* self, uint8_t participantId);
 
 #endif

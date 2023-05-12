@@ -2,8 +2,8 @@
  *  Copyright (c) Peter Bjorklund. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-#include <basal/math.h>
 #include <basal/line_segment.h>
+#include <basal/math.h>
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 
 const float goalSize = 90;
@@ -85,9 +85,14 @@ void nlGameInit(NlGame* self)
     self->latestScoredTeamIndex = 0xff;
 }
 
-static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player,  BlVector2 spawnPosition)
+static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player, BlVector2 spawnPosition)
 {
+    if (player->preferredTeamId != 0 && player->preferredTeamId != 1) {
+        CLOG_ERROR("test")
+    }
     size_t avatarIndex = self->avatarCount++;
+    CLOG_ASSERT(self->avatarCount < 3, "Wrong avatar count")
+
     NlAvatar* avatar = &self->avatars[avatarIndex];
     avatar->avatarIndex = avatarIndex;
     avatar->circle.center = spawnPosition;
@@ -100,6 +105,7 @@ static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player,  BlVect
     avatar->requestedVelocity.x = 0;
     avatar->requestedVelocity.y = 0;
     avatar->teamIndex = player->preferredTeamId;
+
     avatar->slideTackleRemainingTicks = 0u;
     avatar->slideTackleCooldown = 0u;
     avatar->slideTackleRotation = 0;
@@ -116,19 +122,25 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
 {
     for (size_t playerIndex = 0u; playerIndex < self->players.playerCount; ++playerIndex) {
         NlPlayer* player = &self->players.players[playerIndex];
+        if (player->preferredTeamId == NL_TEAM_UNDEFINED) {
+            continue;
+        }
         BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                                 : goalDetectWidth + 40.0f,
                                    playerIndex * 40.0 + goalDetectWidth + 20.0f};
         NlAvatar* avatar = spawnAvatarForPlayer(&self->avatars, player, spawnPosition);
         CLOG_C_DEBUG(log, "spawning avatar %zu for player %zu (participant %d)", avatar->avatarIndex, playerIndex,
                      player->assignedToParticipantIndex)
+        player->phase = NlPlayerPhasePlaying;
     }
 }
 
-static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float safeDistance, float dampening)
+static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float* biggestDepth, float safeDistance,
+                                 float dampening)
 {
     BlCircle circleCheck = *circle;
     circleCheck.radius = circle->radius + safeDistance;
+    *biggestDepth = 0;
 
     int collisionCount = 0;
 
@@ -136,8 +148,13 @@ static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float sa
         BlLineSegment lineSegmentToCheck = g_nlConstants.borderSegments[i];
         BlCollision collision = blLineSegmentCircleIntersect(lineSegmentToCheck, circleCheck);
         if (collision.depth > 0) {
+            float reflectDot = blVector2Dot(*velocity, collision.normal);
             *velocity = blVector2Scale(blVector2Reflect(*velocity, collision.normal), dampening);
             circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth + 0.1);
+            float impact = blFabs(reflectDot);
+            if (impact > *biggestDepth) {
+                *biggestDepth = impact;
+            }
             collisionCount++;
         }
     }
@@ -145,9 +162,21 @@ static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float sa
     return collisionCount;
 }
 
+static bool atLeastOnePlayerHasCommittedToATeam(const NlPlayers* players)
+{
+    for (size_t i = 0; i < players->playerCount; ++i) {
+        const NlPlayer* player = &players->players[i];
+        if (player->phase == NlPlayerPhaseCommittedToTeam) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static void tickWaitingForPlayers(NlGame* self, Clog* log)
 {
-    if (self->players.playerCount > 0) {
+    if (self->players.playerCount > 0 && atLeastOnePlayerHasCommittedToATeam(&self->players)) {
         CLOG_C_DEBUG(log, "start count down")
         self->phase = NlGamePhaseCountDown;
         self->phaseCountDown = 62 * 3;
@@ -163,6 +192,7 @@ static void removePlayer(NlParticipant* participants, NlPlayers* self, size_t in
 
 static void despawnAvatar(NlPlayers* players, NlAvatars* avatars, size_t indexToRemove)
 {
+    CLOG_ASSERT(indexToRemove < avatars->avatarCount, "avatar index is corrupt")
     NlAvatar* avatarToRemove = &avatars->avatars[indexToRemove];
     if (avatarToRemove->controlledByPlayerIndex >= 0) {
         players->players[avatarToRemove->controlledByPlayerIndex].controllingAvatarIndex = -1;
@@ -177,10 +207,21 @@ static NlPlayer* spawnPlayer(NlPlayers* players, uint8_t participantId)
     NlPlayer* assignedPlayer = &players->players[playerIndex];
     assignedPlayer->playerIndex = playerIndex;
     assignedPlayer->assignedToParticipantIndex = participantId;
-    assignedPlayer->controllingAvatarIndex = 0xffu;
-    assignedPlayer->preferredTeamId = players->playerCount == 1 ? 0 : 1;
+    assignedPlayer->controllingAvatarIndex = NL_AVATAR_INDEX_UNDEFINED;
+    assignedPlayer->preferredTeamId = NL_TEAM_UNDEFINED;
 
     return assignedPlayer;
+}
+
+const NlPlayer* nlGameFindSimulationPlayerFromParticipantId(const NlGame* self, uint8_t participantId)
+{
+    for (size_t i = 0; i < self->players.playerCount; ++i) {
+        const NlPlayer* simulationPlayer = &self->players.players[i];
+        if (simulationPlayer->assignedToParticipantIndex == participantId) {
+            return simulationPlayer;
+        }
+    }
+    return 0;
 }
 
 static NlPlayer* participantJoined(NlPlayers* players, NlParticipant* participant, Clog* log)
@@ -195,7 +236,8 @@ static NlPlayer* participantJoined(NlPlayers* players, NlParticipant* participan
     return player;
 }
 
-static BlVector2 findGoodSpawnPosition(NlPlayer* player) {
+static BlVector2 findGoodSpawnPosition(NlPlayer* player)
+{
     BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                             : goalDetectWidth + 40.0f,
                                player->playerIndex * 40.0 + goalDetectWidth + 20.0f};
@@ -205,13 +247,12 @@ static BlVector2 findGoodSpawnPosition(NlPlayer* player) {
 static void gameRulesForJoiningPlayer(NlGame* game, NlPlayer* player)
 {
     if (game->phase == NlGamePhaseWaitingForPlayers) {
+        player->preferredTeamId = 0xffU;
         // It will be spawned later
         return;
     }
 
-    BlVector2 spawnPosition = findGoodSpawnPosition(player);
-
-    spawnAvatarForPlayer(&game->avatars, player, spawnPosition);
+    player->phase = NlPlayerPhaseSelectTeam;
 }
 
 static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipant* participants,
@@ -219,7 +260,7 @@ static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipan
 {
     NlPlayer* assignedPlayer = &players->players[participant->playerIndex];
     int assignedAvatarIndex = assignedPlayer->controllingAvatarIndex;
-    if (assignedAvatarIndex >= 0) {
+    if (assignedAvatarIndex != NL_AVATAR_INDEX_UNDEFINED) {
         despawnAvatar(players, avatars, assignedAvatarIndex);
     }
 
@@ -229,6 +270,12 @@ static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipan
                 participant->playerIndex, participant->participantId)
 
     participant->isUsed = false;
+}
+static void spawnAtFreePosition(NlGame* game, NlPlayer* player)
+{
+    BlVector2 spawnPosition = findGoodSpawnPosition(player);
+
+    spawnAvatarForPlayer(&game->avatars, player, spawnPosition);
 }
 
 static void checkInputDiff(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log)
@@ -276,42 +323,70 @@ static void tickCountDown(NlGame* self)
     self->phaseCountDown--;
 }
 
-#define MINIMAL_VELOCITY (0.12f)
+#define MINIMAL_VELOCITY (0.1f)
 
 static void tickBall(NlBall* ball)
 {
-    ball->velocity = blVector2Scale(ball->velocity, 0.995f);
+    ball->velocity = blVector2Scale(ball->velocity, 0.988f);
 
     ball->circle.center = blVector2Add(ball->circle.center, ball->velocity);
 
-    int collided = collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
+    float biggestDepth;
+    int collided = collideAgainstBorders(&ball->circle, &ball->velocity, &biggestDepth, 0.f, 0.91f);
     if (collided > 0) {
-        ball->collideCounter++;
+        if (biggestDepth > 0.8f && blVector2Length(ball->velocity) > 0.7f) {
+            ball->collideCounter++;
+        }
     }
     if (blVector2SquareLength(ball->velocity) < MINIMAL_VELOCITY) {
         ball->velocity = blVector2Zero();
     }
 }
+static bool isAllowedToJoinWithAvatar(NlGamePhase gamePhase)
+{
+    return gamePhase == NlGamePhaseCountDown || gamePhase == NlGamePhaseAfterAGoal;
+}
 
-static void playerToAvatarControl(NlPlayers* players, NlAvatars* avatars)
+static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* avatars)
 {
     for (size_t i = 0; i < players->playerCount; ++i) {
         NlPlayer* player = &players->players[i];
-        if (player->controllingAvatarIndex == 0xff) {
-            continue;
-        }
-        if (player->playerInput.inputType != NlPlayerInputTypeInGame) {
-            continue;
-        }
 
-        NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
-        const NlPlayerInGameInput* inGameInput = &player->playerInput.input.inGameInput;
-        BlVector2 requestVelocity;
-        requestVelocity.x = inGameInput->horizontalAxis;
-        requestVelocity.y = inGameInput->verticalAxis;
-        avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
-        avatar->requestBuildKickPower = inGameInput->buttons & 0x01;
-        avatar->requestSlideTackle = inGameInput->buttons & 0x02;
+        switch (player->playerInput.inputType) {
+            case NlPlayerInputTypeInGame: {
+                if (player->controllingAvatarIndex == NL_AVATAR_INDEX_UNDEFINED) {
+                    continue;
+                }
+                const NlPlayerInGameInput* inGameInput = &player->playerInput.input.inGameInput;
+                NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
+                BlVector2 requestVelocity;
+                requestVelocity.x = inGameInput->horizontalAxis;
+                requestVelocity.y = inGameInput->verticalAxis;
+                avatar->requestedVelocity = blVector2Scale(requestVelocity, 0.4f);
+                avatar->requestBuildKickPower = inGameInput->buttons & 0x01;
+                avatar->requestSlideTackle = inGameInput->buttons & 0x02;
+
+            } break;
+            case NlPlayerInputTypeSelectTeam: {
+                if (player->phase == NlPlayerPhaseSelectTeam) {
+                    NlPlayerSelectTeam* selectTeamInput = &player->playerInput.input.selectTeam;
+                    CLOG_INFO("player selected team %d", selectTeamInput->preferredTeamToJoin)
+
+                    if (player->preferredTeamId != selectTeamInput->preferredTeamToJoin) {
+                        CLOG_NOTICE("player made a choice %d", selectTeamInput->preferredTeamToJoin)
+                    }
+                    player->preferredTeamId = selectTeamInput->preferredTeamToJoin;
+                    player->phase = NlPlayerPhaseCommittedToTeam;
+                    if (player->controllingAvatarIndex == NL_AVATAR_INDEX_UNDEFINED &&
+                        isAllowedToJoinWithAvatar(game->phase) && player->preferredTeamId != NL_TEAM_UNDEFINED) {
+                        spawnAtFreePosition(game, player);
+                        player->phase = NlPlayerPhasePlaying;
+                    }
+                } else {
+                }
+                break;
+            }
+        }
     }
 }
 
@@ -345,7 +420,8 @@ static void tickAvatars(NlAvatars* avatars)
             avatar->visualRotation += angleDiff * 0.1f;
         }
 
-        collideAgainstBorders(&avatar->circle, &avatar->velocity, 10.0f, 0);
+        float biggestDepth;
+        collideAgainstBorders(&avatar->circle, &avatar->velocity, &biggestDepth, 10.0f, 0);
     }
 }
 
@@ -388,7 +464,8 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
     float normalizedKickPower = (float) kickPowerTicks / MAX_KICK_POWER_TICKS;
     BlVector2 kickVelocity = blVector2Scale(avatarDirection, normalizedKickPower * 10.0f + 1.0f);
     ball->velocity = blVector2Add(avatar->velocity, kickVelocity);
-    collideAgainstBorders(&ball->circle, &ball->velocity, 0.f, 0.9f);
+    float biggestDepth;
+    collideAgainstBorders(&ball->circle, &ball->velocity, &biggestDepth, 0.f, 0.9f);
     avatar->kickCooldown = 14;
     avatar->dribbleCooldown = 12;
     avatar->kickedCounter++;
@@ -547,8 +624,25 @@ static void resetAvatarsToStartPositions(NlAvatars* avatars)
     }
 }
 
+static void spawnAvatarsForWaitingPlayers(NlGame* self)
+{
+    for (size_t i = 0; i < self->players.playerCount; ++i) {
+        for (size_t playerIndex = 0u; playerIndex < self->players.playerCount; ++playerIndex) {
+            NlPlayer* player = &self->players.players[playerIndex];
+            if (player->phase == NlPlayerPhaseCommittedToTeam &&
+                player->controllingAvatarIndex == NL_AVATAR_INDEX_UNDEFINED &&
+                player->preferredTeamId != NL_TEAM_UNDEFINED) {
+                spawnAtFreePosition(self, player);
+                player->phase = NlPlayerPhasePlaying;
+            }
+        }
+    }
+}
+
 static void resetPitchAndStartCountdown(NlGame* self)
 {
+    spawnAvatarsForWaitingPlayers(self);
+
     resetAvatarsToStartPositions(&self->avatars);
     resetBallToMiddlePosition(&self->ball);
 
@@ -590,7 +684,7 @@ static void tickPostGame(NlGame* self)
 void nlGameTick(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log)
 {
     checkInputDiff(self, inputs, inputCount, log);
-    playerToAvatarControl(&self->players, &self->avatars);
+    playerToAvatarControl(self, &self->players, &self->avatars);
 
     self->tickCount++;
     switch (self->phase) {
