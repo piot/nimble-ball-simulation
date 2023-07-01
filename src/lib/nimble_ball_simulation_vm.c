@@ -31,7 +31,7 @@ static int stateToString(void* _self, const TransmuteState* state, char* target,
 
     const NlGame* appState = (const NlGame*) state->state;
     return tc_snprintf(target, maxTargetOctetSize, "state: tick: %hu ball-pos: %.1f, %.1f", appState->tickCount,
-                       appState->ball.circle.center.x, appState->ball.circle.center.y);
+                       (double) appState->ball.circle.center.x, (double) appState->ball.circle.center.y);
 }
 
 static int inputToString(void* _self, const TransmuteParticipantInput* input, char* target, size_t maxTargetOctetSize)
@@ -64,7 +64,7 @@ static void tick(void* _self, const TransmuteInput* input)
             tc_mem_clear_type(&playerInputs[i].playerInput);
             playerInputs[i].playerInput.inputType = NlPlayerInputTypeForced;
         } else {
-            CLOG_ASSERT(sizeof(NlPlayerInput) == input->participantInputs[i].octetSize, "wrong NlPlayerInput struct");
+            CLOG_ASSERT(sizeof(NlPlayerInput) == input->participantInputs[i].octetSize, "wrong NlPlayerInput struct")
             playerInputs[i].playerInput = *(const NlPlayerInput*) input->participantInputs[i].input;
         }
         playerInputs[i].participantId = input->participantInputs[i].participantId;

@@ -6,20 +6,20 @@
 #include <basal/math.h>
 #include <nimble-ball-simulation/nimble_ball_simulation.h>
 
-const float goalSize = 90;
-const float goalDetectWidth = 40;
+static const float goalSize = 90;
+static const float goalDetectWidth = 40;
 
-const float screenWidth = 640;
+static const float screenWidth = 640;
 
-const float spacing = 6.0f;
-const float arenaLeft = goalDetectWidth + spacing;
-const float arenaWidth = screenWidth - arenaLeft - spacing;
-const float arenaHeight = 280;
+static const float spacing = 6.0f;
+static const float arenaLeft = goalDetectWidth + spacing;
+static const float arenaWidth = screenWidth - arenaLeft - spacing;
+static const float arenaHeight = 280;
 
-const float arenaLineBottom = 20;
-const float arenaLineTop = arenaLineBottom + arenaHeight;
-const float arenaHeightMiddle = arenaLineBottom + arenaHeight / 2;
-const float arenaRight = arenaLeft + arenaWidth - 1;
+static const float arenaLineBottom = 20;
+static const float arenaLineTop = arenaLineBottom + arenaHeight;
+static const float arenaHeightMiddle = arenaLineBottom + arenaHeight / 2;
+static const float arenaRight = arenaLeft + arenaWidth - 1;
 
 const NlConstants g_nlConstants = {
     // Goal 0
@@ -94,7 +94,7 @@ static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player, BlVecto
     CLOG_ASSERT(self->avatarCount < 3, "Wrong avatar count")
 
     NlAvatar* avatar = &self->avatars[avatarIndex];
-    avatar->avatarIndex = avatarIndex;
+    avatar->avatarIndex = (uint8_t) avatarIndex;
     avatar->circle.center = spawnPosition;
     avatar->circle.radius = 20.0f;
     avatar->controlledByPlayerIndex = player->playerIndex;
@@ -113,7 +113,7 @@ static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player, BlVecto
     avatar->kickedCounter = 0u;
     avatar->visualRotation = 0;
 
-    player->controllingAvatarIndex = avatarIndex;
+    player->controllingAvatarIndex = (uint8_t) avatarIndex;
 
     return avatar;
 }
@@ -127,9 +127,9 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         }
         BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                                 : goalDetectWidth + 40.0f,
-                                   playerIndex * 40.0 + goalDetectWidth + 20.0f};
+                                   (float) ((float) playerIndex * 40.0f + goalDetectWidth + 20.0f)};
         NlAvatar* avatar = spawnAvatarForPlayer(&self->avatars, player, spawnPosition);
-        CLOG_C_DEBUG(log, "spawning avatar %zu for player %zu (participant %d)", avatar->avatarIndex, playerIndex,
+        CLOG_C_DEBUG(log, "spawning avatar %hhu for player %zu (participant %d)", avatar->avatarIndex, playerIndex,
                      player->assignedToParticipantIndex)
         player->phase = NlPlayerPhasePlaying;
     }
@@ -150,7 +150,7 @@ static int collideAgainstBorders(BlCircle* circle, BlVector2* velocity, float* b
         if (collision.depth > 0) {
             float reflectDot = blVector2Dot(*velocity, collision.normal);
             *velocity = blVector2Scale(blVector2Reflect(*velocity, collision.normal), dampening);
-            circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth + 0.1);
+            circle->center = blVector2AddScale(circle->center, collision.normal, collision.depth + 0.1f);
             float impact = blFabs(reflectDot);
             if (impact > *biggestDepth) {
                 *biggestDepth = impact;
@@ -187,15 +187,15 @@ static void tickWaitingForPlayers(NlGame* self, Clog* log)
 static void removePlayer(NlParticipant* participants, NlPlayers* self, size_t indexToRemove)
 {
     self->players[indexToRemove] = self->players[--self->playerCount];
-    participants[self->players[indexToRemove].assignedToParticipantIndex].playerIndex = indexToRemove;
+    participants[self->players[indexToRemove].assignedToParticipantIndex].playerIndex = (uint8_t) indexToRemove;
 }
 
 static void despawnAvatar(NlPlayers* players, NlAvatars* avatars, size_t indexToRemove)
 {
     CLOG_ASSERT(indexToRemove < avatars->avatarCount, "avatar index is corrupt")
     NlAvatar* avatarToRemove = &avatars->avatars[indexToRemove];
-    if (avatarToRemove->controlledByPlayerIndex >= 0) {
-        players->players[avatarToRemove->controlledByPlayerIndex].controllingAvatarIndex = -1;
+    if (avatarToRemove->controlledByPlayerIndex != 0xff) {
+        players->players[avatarToRemove->controlledByPlayerIndex].controllingAvatarIndex = 0xff;
     }
 
     avatars->avatars[indexToRemove] = avatars->avatars[--avatars->avatarCount];
@@ -205,7 +205,7 @@ static NlPlayer* spawnPlayer(NlPlayers* players, uint8_t participantId)
 {
     size_t playerIndex = players->playerCount++;
     NlPlayer* assignedPlayer = &players->players[playerIndex];
-    assignedPlayer->playerIndex = playerIndex;
+    assignedPlayer->playerIndex = (uint8_t) playerIndex;
     assignedPlayer->assignedToParticipantIndex = participantId;
     assignedPlayer->controllingAvatarIndex = NL_AVATAR_INDEX_UNDEFINED;
     assignedPlayer->preferredTeamId = NL_TEAM_UNDEFINED;
@@ -240,7 +240,7 @@ static BlVector2 findGoodSpawnPosition(NlPlayer* player)
 {
     BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                             : goalDetectWidth + 40.0f,
-                               player->playerIndex * 40.0 + goalDetectWidth + 20.0f};
+                               (float) ((float)player->playerIndex * 40.0f + goalDetectWidth + 20.0f)};
     return spawnPosition;
 }
 
@@ -248,6 +248,7 @@ static void gameRulesForJoiningPlayer(NlGame* game, NlPlayer* player)
 {
     if (game->phase == NlGamePhaseWaitingForPlayers) {
         player->preferredTeamId = 0xffU;
+        player->phase = NlPlayerPhaseSelectTeam;
         // It will be spawned later
         return;
     }
@@ -261,16 +262,17 @@ static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipan
     NlPlayer* assignedPlayer = &players->players[participant->playerIndex];
     int assignedAvatarIndex = assignedPlayer->controllingAvatarIndex;
     if (assignedAvatarIndex != NL_AVATAR_INDEX_UNDEFINED) {
-        despawnAvatar(players, avatars, assignedAvatarIndex);
+        despawnAvatar(players, avatars, (size_t) assignedAvatarIndex);
     }
 
     removePlayer(participants, players, participant->playerIndex);
 
-    CLOG_C_INFO(log, "someone has left releasing player %zu previously assigned to participant %d",
+    CLOG_C_INFO(log, "someone has left releasing player %hhu previously assigned to participant %d",
                 participant->playerIndex, participant->participantId)
 
     participant->isUsed = false;
 }
+
 static void spawnAtFreePosition(NlGame* game, NlPlayer* player)
 {
     BlVector2 spawnPosition = findGoodSpawnPosition(player);
@@ -281,8 +283,8 @@ static void spawnAtFreePosition(NlGame* game, NlPlayer* player)
 static void checkInputDiff(NlGame* self, const NlPlayerInputWithParticipantInfo* inputs, size_t inputCount, Clog* log)
 {
     if (inputCount != self->lastParticipantLookupCount) {
-        CLOG_C_INFO(log, "someone has either left or added, count is different %zu vs %zu", inputCount,
-                    self->lastParticipantLookupCount)
+        CLOG_C_INFO(log, "a participant has either been added or removed, count is different. was %hhu and is now %zu",
+                    self->lastParticipantLookupCount, inputCount)
     }
 
     for (size_t i = 0; i < NL_MAX_PARTICIPANTS; ++i) {
@@ -297,7 +299,7 @@ static void checkInputDiff(NlGame* self, const NlPlayerInputWithParticipantInfo*
             NlPlayer* player = participantJoined(&self->players, participant, log);
             gameRulesForJoiningPlayer(self, player);
         }
-        if (participant->playerIndex >= 0) {
+        if (participant->playerIndex != 0xff) {
             self->players.players[participant->playerIndex].playerInput = inputs[i].playerInput;
         }
         participant->internalMarked = true;
@@ -311,7 +313,7 @@ static void checkInputDiff(NlGame* self, const NlPlayerInputWithParticipantInfo*
         }
     }
 
-    self->lastParticipantLookupCount = inputCount;
+    self->lastParticipantLookupCount = (uint8_t) inputCount;
 }
 
 static void tickCountDown(NlGame* self)
@@ -397,7 +399,7 @@ static void tickAvatars(NlAvatars* avatars)
 
         if (avatar->slideTackleRemainingTicks > 0) {
             BlVector2 slideUnitDirection = blVector2FromAngle(avatar->slideTackleRotation);
-            float normalizedDuration = (avatar->slideTackleRemainingTicks / SLIDE_TACKLE_DURATION);
+            float normalizedDuration = (float) avatar->slideTackleRemainingTicks / (float) SLIDE_TACKLE_DURATION;
             float slideFactor = normalizedDuration * normalizedDuration * 8.0f;
             avatar->velocity = blVector2AddScale(avatar->velocity, slideUnitDirection, slideFactor);
         } else if (avatar->slideTackleCooldown > 0) {
@@ -474,7 +476,7 @@ static void performKick(NlAvatar* avatar, NlBall* ball, uint8_t kickPowerTicks)
 static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams, uint8_t* latestTeamToScore)
 {
     BlCollision collision = blRectCircleIntersect(goal->rect, ball->circle);
-    if (collision.depth == 0) {
+    if (fabsf(collision.depth) < 0.001f) {
         return false;
     }
 
@@ -493,7 +495,7 @@ static bool checkGoal(const NlGoal* goal, const NlBall* ball, NlTeams* teams, ui
 
     int opposingTeam = goal->ownedByTeam == 0 ? 1 : 0;
     teams->teams[opposingTeam].score++;
-    *latestTeamToScore = opposingTeam;
+    *latestTeamToScore = (uint8_t) opposingTeam;
     return true;
 }
 
@@ -603,14 +605,14 @@ static void resetAvatarsToStartPositions(NlAvatars* avatars)
         int column = (20 + colIndex * 40) * columnFactor;
         int row = rowIndex * 40;
 
-        const int centerLine = arenaWidth / 2;
+        const int centerLine = (int) (arenaWidth / 2);
         column = centerLine + column;
 
         const int rowOffset = 50;
         float rotation = avatar->teamIndex ? -BL_PI : 0.f;
         avatar->visualRotation = rotation;
-        avatar->circle.center.x = column;
-        avatar->circle.center.y = row + rowOffset;
+        avatar->circle.center.x = (float) column;
+        avatar->circle.center.y = (float) (row + rowOffset);
         avatar->velocity = blVector2Zero();
         avatar->dribbleCooldown = 0;
         avatar->kickCooldown = 0;
