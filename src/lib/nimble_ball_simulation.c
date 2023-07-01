@@ -240,7 +240,7 @@ static BlVector2 findGoodSpawnPosition(NlPlayer* player)
 {
     BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                             : goalDetectWidth + 40.0f,
-                               (float) (player->playerIndex * 40.0f + goalDetectWidth + 20.0f)};
+                               (float) ((float)player->playerIndex * 40.0f + goalDetectWidth + 20.0f)};
     return spawnPosition;
 }
 
@@ -399,7 +399,7 @@ static void tickAvatars(NlAvatars* avatars)
 
         if (avatar->slideTackleRemainingTicks > 0) {
             BlVector2 slideUnitDirection = blVector2FromAngle(avatar->slideTackleRotation);
-            float normalizedDuration = (avatar->slideTackleRemainingTicks / SLIDE_TACKLE_DURATION);
+            float normalizedDuration = (float) avatar->slideTackleRemainingTicks / (float) SLIDE_TACKLE_DURATION;
             float slideFactor = normalizedDuration * normalizedDuration * 8.0f;
             avatar->velocity = blVector2AddScale(avatar->velocity, slideUnitDirection, slideFactor);
         } else if (avatar->slideTackleCooldown > 0) {
