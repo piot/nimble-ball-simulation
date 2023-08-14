@@ -46,7 +46,7 @@ const NlConstants g_nlConstants = {
     arenaRight - goalDetectWidth, arenaLineBottom, arenaRight - goalDetectWidth,
     arenaHeightMiddle - goalSize / 2, //
 
-    (int) (62.5f * 60.0f),            // matchDuration
+    (int) (62.5f * 60.0f), // matchDuration
 };
 
 #define SLIDE_TACKLE_DURATION (20)
@@ -125,12 +125,19 @@ static void spawnAvatarsForPlayers(NlGame* self, Clog* log)
         if (player->preferredTeamId == NL_TEAM_UNDEFINED) {
             continue;
         }
+
         BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                                 : goalDetectWidth + 40.0f,
                                    (float) ((float) playerIndex * 40.0f + goalDetectWidth + 20.0f)};
+
         NlAvatar* avatar = spawnAvatarForPlayer(&self->avatars, player, spawnPosition);
+#if defined CLOG_LOG_ENABLED
         CLOG_C_DEBUG(log, "spawning avatar %hhu for player %zu (participant %d)", avatar->avatarIndex, playerIndex,
                      player->assignedToParticipantIndex)
+#else
+        (void) log;
+        (void) avatar;
+#endif
         player->phase = NlPlayerPhasePlaying;
     }
 }
@@ -226,6 +233,8 @@ const NlPlayer* nlGameFindSimulationPlayerFromParticipantId(const NlGame* self, 
 
 static NlPlayer* participantJoined(NlPlayers* players, NlParticipant* participant, Clog* log)
 {
+    (void) log;
+
     NlPlayer* player = spawnPlayer(players, participant->participantId);
     CLOG_C_INFO(log, "participant has joined. player count is %hhu. created player %d for participant %d",
                 players->playerCount, player->playerIndex, participant->participantId)
@@ -240,7 +249,7 @@ static BlVector2 findGoodSpawnPosition(NlPlayer* player)
 {
     BlVector2 spawnPosition = {player->preferredTeamId == 1 ? arenaWidth - goalDetectWidth - 20.0f
                                                             : goalDetectWidth + 40.0f,
-                               (float) ((float)player->playerIndex * 40.0f + goalDetectWidth + 20.0f)};
+                               (float) ((float) player->playerIndex * 40.0f + goalDetectWidth + 20.0f)};
     return spawnPosition;
 }
 
@@ -259,6 +268,7 @@ static void gameRulesForJoiningPlayer(NlGame* game, NlPlayer* player)
 static void participantLeft(NlPlayers* players, NlAvatars* avatars, NlParticipant* participants,
                             NlParticipant* participant, Clog* log)
 {
+    (void) log;
     NlPlayer* assignedPlayer = &players->players[participant->playerIndex];
     int assignedAvatarIndex = assignedPlayer->controllingAvatarIndex;
     if (assignedAvatarIndex != NL_AVATAR_INDEX_UNDEFINED) {
