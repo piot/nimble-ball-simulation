@@ -122,6 +122,7 @@ typedef struct NlAvatar {
     bool requestSlideTackle;
     uint8_t kickPower;
     uint8_t teamIndex;
+    bool isInvisible;
 } NlAvatar;
 
 typedef struct NlAvatars {

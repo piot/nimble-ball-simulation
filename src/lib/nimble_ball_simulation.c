@@ -367,11 +367,13 @@ static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* a
         switch (player->playerInput.inputType) {
             case NlPlayerInputTypeInGame: {
                 player->isWaitingForReconnect = false;
+
                 if (player->controllingAvatarIndex == NL_AVATAR_INDEX_UNDEFINED) {
                     continue;
                 }
                 const NlPlayerInGameInput* inGameInput = &player->playerInput.input.inGameInput;
                 NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
+                avatar->isInvisible = false;
                 BlVector2 requestVelocity;
                 requestVelocity.x = inGameInput->horizontalAxis;
                 requestVelocity.y = inGameInput->verticalAxis;
@@ -404,6 +406,10 @@ static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* a
                 break;
             case NlPlayerInputTypeWaitingForReconnect:
                 CLOG_INFO("waiting for reconnect!")
+                if (player->controllingAvatarIndex != NL_AVATAR_INDEX_UNDEFINED) {
+                    NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
+                    avatar->isInvisible = true;
+                }
                 player->isWaitingForReconnect = true;
                 break;
         }
