@@ -91,7 +91,7 @@ static NlAvatar* spawnAvatarForPlayer(NlAvatars* self, NlPlayer* player, BlVecto
         CLOG_ERROR("test")
     }
     size_t avatarIndex = self->avatarCount++;
-    CLOG_ASSERT(self->avatarCount < 3, "Wrong avatar count")
+    CLOG_ASSERT(self->avatarCount <= NL_MAX_PLAYERS, "Wrong avatar count")
 
     NlAvatar* avatar = &self->avatars[avatarIndex];
     avatar->avatarIndex = (uint8_t) avatarIndex;
@@ -405,7 +405,6 @@ static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* a
                 // Do nothing
                 break;
             case NlPlayerInputTypeWaitingForReconnect:
-                CLOG_INFO("waiting for reconnect!")
                 if (player->controllingAvatarIndex != NL_AVATAR_INDEX_UNDEFINED) {
                     NlAvatar* avatar = &avatars->avatars[player->controllingAvatarIndex];
                     avatar->isInvisible = true;
