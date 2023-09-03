@@ -59,15 +59,23 @@ static void tick(void* _self, const TransmuteInput* input)
     NlPlayerInputWithParticipantInfo playerInputs[64];
 
     for (size_t i = 0; i < input->participantCount; ++i) {
-        if (input->participantInputs[i].octetSize == 0) {
-            // This is a forced step. Represent that in a game specific way
-            tc_mem_clear_type(&playerInputs[i].playerInput);
-            playerInputs[i].playerInput.inputType = NlPlayerInputTypeForced;
-        } else {
-            CLOG_ASSERT(sizeof(NlPlayerInput) == input->participantInputs[i].octetSize, "wrong NlPlayerInput struct")
-            playerInputs[i].playerInput = *(const NlPlayerInput*) input->participantInputs[i].input;
+        const TransmuteParticipantInput* transmuteParticipantInput = &input->participantInputs[i];
+        switch (transmuteParticipantInput->inputType)
+        {
+            case TransmuteParticipantInputTypeNormal:
+                CLOG_ASSERT(sizeof(NlPlayerInput) == transmuteParticipantInput->octetSize, "wrong NlPlayerInput struct")
+                playerInputs[i].playerInput = *(const NlPlayerInput*) transmuteParticipantInput->input;
+                break;
+            case TransmuteParticipantInputTypeNoInputInTime:
+                tc_mem_clear_type(&playerInputs[i].playerInput);
+                playerInputs[i].playerInput.inputType = NlPlayerInputTypeForced;
+                break;
+            case TransmuteParticipantInputTypeWaitingForReconnect:
+                tc_mem_clear_type(&playerInputs[i].playerInput);
+                playerInputs[i].playerInput.inputType = NlPlayerInputTypeWaitingForReconnect;
+                break;
         }
-        playerInputs[i].participantId = input->participantInputs[i].participantId;
+        playerInputs[i].participantId = transmuteParticipantInput->participantId;
     }
 
     nlGameTick(&self->game, playerInputs, input->participantCount, &self->log);

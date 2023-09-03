@@ -46,6 +46,7 @@ typedef struct NlPlayerSelectTeam {
 
 typedef enum NlPlayerInputType {
     NlPlayerInputTypeForced,
+    NlPlayerInputTypeWaitingForReconnect,
     NlPlayerInputTypeNone,
     NlPlayerInputTypeInGame,
     NlPlayerInputTypeSelectTeam,
@@ -84,6 +85,7 @@ typedef struct NlPlayer {
     uint8_t assignedToParticipantIndex;
     NlPlayerInput playerInput;
     NlPlayerPhase phase;
+    bool isWaitingForReconnect;
 } NlPlayer;
 
 #define NL_MAX_TEAMS (2)

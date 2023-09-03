@@ -366,6 +366,7 @@ static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* a
 
         switch (player->playerInput.inputType) {
             case NlPlayerInputTypeInGame: {
+                player->isWaitingForReconnect = false;
                 if (player->controllingAvatarIndex == NL_AVATAR_INDEX_UNDEFINED) {
                     continue;
                 }
@@ -398,6 +399,13 @@ static void playerToAvatarControl(NlGame* game, NlPlayers* players, NlAvatars* a
                 }
                 break;
             }
+            case NlPlayerInputTypeForced:
+                // Do nothing
+                break;
+            case NlPlayerInputTypeWaitingForReconnect:
+                CLOG_INFO("waiting for reconnect!")
+                player->isWaitingForReconnect = true;
+                break;
         }
     }
 }
