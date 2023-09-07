@@ -50,6 +50,7 @@ const NlConstants g_nlConstants = {
 };
 
 #define SLIDE_TACKLE_DURATION (20)
+#define SLIDE_TACKLE_COOLDOWN (40)
 
 static void resetBallToMiddlePosition(NlBall* ball)
 {
@@ -423,12 +424,14 @@ static void tickAvatars(NlAvatars* avatars)
         if (avatar->slideTackleRemainingTicks > 0) {
             BlVector2 slideUnitDirection = blVector2FromAngle(avatar->slideTackleRotation);
             float normalizedDuration = (float) avatar->slideTackleRemainingTicks / (float) SLIDE_TACKLE_DURATION;
-            float slideFactor = normalizedDuration * normalizedDuration * 8.0f;
+            float slideFactor = normalizedDuration * normalizedDuration * 0.8f;
             avatar->velocity = blVector2AddScale(avatar->velocity, slideUnitDirection, slideFactor);
-        } else if (avatar->slideTackleCooldown > 0) {
-            avatar->velocity = blVector2Zero();
         } else {
             float speedFactor = avatar->kickPower > 0 ? 0.05f : 0.2f;
+            if (avatar->slideTackleCooldown > 0) {
+                speedFactor *= 0.5f;
+            }
+
             avatar->velocity = blVector2AddScale(avatar->velocity, avatar->requestedVelocity, speedFactor);
         }
 
@@ -582,7 +585,7 @@ static void tickSlideTackle(NlAvatars* avatars)
             continue;
         }
         if (avatar->requestSlideTackle) {
-            avatar->slideTackleCooldown = 60;
+            avatar->slideTackleCooldown = SLIDE_TACKLE_COOLDOWN;
             avatar->slideTackleRemainingTicks = SLIDE_TACKLE_DURATION;
             avatar->slideTackleRotation = avatar->visualRotation;
         }
